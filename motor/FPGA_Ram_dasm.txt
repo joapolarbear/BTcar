@@ -1,0 +1,4991 @@
+
+FPGA_Ram.elf:     file format elf32-tradlittlemips
+
+
+Disassembly of section .text_init:
+
+bfc00000 <__reset_vector>:
+G:\0\2bluetooth_car\motor/boot.S:63
+/**************************************************************************************
+    R E S E T   E X C E P T I O N   H A N D L E R
+**************************************************************************************/
+
+LEAF(__reset_vector)
+    la a2,__cpu_init
+bfc00000:	3c06bfc0 	lui	a2,0xbfc0
+bfc00004:	24c60014 	addiu	a2,a2,20
+G:\0\2bluetooth_car\motor/boot.S:64
+    jr a2
+bfc00008:	00c00008 	jr	a2
+G:\0\2bluetooth_car\motor/boot.S:65
+    mtc0    $0, C0_COUNT        # Clear cp0 Count (Used to measure boot time.)
+bfc0000c:	40804800 	mtc0	zero,c0_count
+G:\0\2bluetooth_car\motor/boot.S:66
+    nop
+bfc00010:	00000000 	nop
+
+bfc00014 <__cpu_init>:
+G:\0\2bluetooth_car\motor/boot.S:75
+LEAF(__cpu_init)
+
+    # Verify the code is here due to a reset and not NMI. If this is an NMI then trigger
+    # a debugger breakpoint using a sdbp instruction.
+
+    mfc0    s1, C0_STATUS       # Read CP0 Status
+bfc00014:	40116000 	mfc0	s1,c0_status
+G:\0\2bluetooth_car\motor/boot.S:76
+    ext     s1, s1, 19, 1       # extract NMI
+bfc00018:	7e3104c0 	ext	s1,s1,0x13,0x1
+G:\0\2bluetooth_car\motor/boot.S:77
+    beqz    s1, init_resources  # Branch if this is NOT an NMI exception.
+bfc0001c:	12200002 	beqz	s1,bfc00028 <init_resources>
+G:\0\2bluetooth_car\motor/boot.S:78
+    nop
+bfc00020:	00000000 	nop
+G:\0\2bluetooth_car\motor/boot.S:79
+    sdbbp                       # Failed assertion: NMI.
+bfc00024:	7000003f 	sdbbp
+
+bfc00028 <init_resources>:
+G:\0\2bluetooth_car\motor/boot.S:85
+
+init_resources:                 # initializes resources for "cpu".
+
+    # Initialize CP0 registers
+
+    la a2,      init_cp0        # Init CP0 Status, Count, Compare, Watch*, and Cause.
+bfc00028:	3c06bfc0 	lui	a2,0xbfc0
+bfc0002c:	24c6049c 	addiu	a2,a2,1180
+G:\0\2bluetooth_car\motor/boot.S:86
+    jalr a2
+bfc00030:	00c0f809 	jalr	a2
+G:\0\2bluetooth_car\motor/boot.S:87
+    nop
+bfc00034:	00000000 	nop
+G:\0\2bluetooth_car\motor/boot.S:118
+  #  jalr    a2
+  #  nop
+
+    # Prepare for eret to main.
+
+    la      ra, all_done        # If main returns then go to all_done:.
+bfc00038:	3c1fbfc0 	lui	ra,0xbfc0
+bfc0003c:	27ff0058 	addiu	ra,ra,88
+G:\0\2bluetooth_car\motor/boot.S:119
+    move    a0, zero            # Indicate that there are no arguments available.
+bfc00040:	00002021 	move	a0,zero
+G:\0\2bluetooth_car\motor/boot.S:120
+    la      v0, _start          # load the address of the CRT entry point _start.
+bfc00044:	3c02bfc0 	lui	v0,0xbfc0
+bfc00048:	24420508 	addiu	v0,v0,1288
+G:\0\2bluetooth_car\motor/boot.S:121
+    mtc0    v0, $30             # Write ErrorEPC with the address of main
+bfc0004c:	4082f000 	mtc0	v0,c0_errorepc
+G:\0\2bluetooth_car\motor/boot.S:122
+    ehb                         # clear hazards (makes sure write to ErrorPC has completed)
+bfc00050:	000000c0 	ehb
+G:\0\2bluetooth_car\motor/boot.S:126
+
+    # Return from exception will now execute code in main
+
+    eret                        # Exit reset exception handler and start execution of _start.
+bfc00054:	42000018 	eret
+
+bfc00058 <all_done>:
+G:\0\2bluetooth_car\motor/boot.S:132
+
+
+/**************************************************************************************/
+all_done:
+    # If main returns it will return to this point.  Just spin here.
+    b       all_done
+bfc00058:	1000ffff 	b	bfc00058 <all_done>
+G:\0\2bluetooth_car\motor/boot.S:133
+    nop
+bfc0005c:	00000000 	nop
+
+bfc00060 <init_icache>:
+G:\0\2bluetooth_car\motor/init_caches.S:60
+LEAF(init_icache)
+
+	// Can be skipped if using magic simulation cache flush
+
+	// Determine how big the I$ is
+	mfc0	v0, C0_CONFIG1		// read C0_Config1
+bfc00060:	40028001 	mfc0	v0,c0_config1
+G:\0\2bluetooth_car\motor/init_caches.S:63
+
+	// Isolate I$ Line Size
+	ext	    v1, v0, CFG1_ILSHIFT, 3		// extract IL
+bfc00064:	7c4314c0 	ext	v1,v0,0x13,0x3
+G:\0\2bluetooth_car\motor/init_caches.S:66
+
+	// Skip ahead if No I$
+	beq	    v1, zero, done_icache
+bfc00068:	10600011 	beqz	v1,bfc000b0 <done_icache>
+G:\0\2bluetooth_car\motor/init_caches.S:67
+	nop
+bfc0006c:	00000000 	nop
+G:\0\2bluetooth_car\motor/init_caches.S:69
+
+	li	    a2, 2
+bfc00070:	24060002 	li	a2,2
+G:\0\2bluetooth_car\motor/init_caches.S:70
+	sllv    v1, a2, v1			// Now have true I$ line size in bytes
+bfc00074:	00661804 	sllv	v1,a2,v1
+G:\0\2bluetooth_car\motor/init_caches.S:72
+
+	ext	    a0, v0, CFG1_ISSHIFT, 3		// extract IS
+bfc00078:	7c441580 	ext	a0,v0,0x16,0x3
+G:\0\2bluetooth_car\motor/init_caches.S:73
+	li	    a2, 64
+bfc0007c:	24060040 	li	a2,64
+G:\0\2bluetooth_car\motor/init_caches.S:74
+	sllv    a0, a2, a0			// I$ Sets per way
+bfc00080:	00862004 	sllv	a0,a2,a0
+G:\0\2bluetooth_car\motor/init_caches.S:77
+
+	// Config1IA == I$ Assoc - 1
+	ext	    a1, v0, CFG1_IASHIFT, 3		// extract IA
+bfc00084:	7c451400 	ext	a1,v0,0x10,0x3
+G:\0\2bluetooth_car\motor/init_caches.S:78
+	add	    a1, 1
+bfc00088:	20a50001 	addi	a1,a1,1
+G:\0\2bluetooth_car\motor/init_caches.S:80
+
+	mul	    a0, a0, a1			// Total number of sets
+bfc0008c:	70852002 	mul	a0,a0,a1
+G:\0\2bluetooth_car\motor/init_caches.S:82
+
+	lui	    a2, 0x8000			// Get a KSeg0 address for cacheops
+bfc00090:	3c068000 	lui	a2,0x8000
+G:\0\2bluetooth_car\motor/init_caches.S:85
+
+	// Clear TagLo/TagHi registers
+	mtc0    zero, C0_TAGLO		// write C0_ITagLo
+bfc00094:	4080e000 	mtc0	zero,c0_taglo
+G:\0\2bluetooth_car\motor/init_caches.S:86
+	mtc0    zero, C0_TAGHI		// write C0_ITagHi
+bfc00098:	4080e800 	mtc0	zero,c0_taghi
+G:\0\2bluetooth_car\motor/init_caches.S:88
+
+	move    a3, a0
+bfc0009c:	00803821 	move	a3,a0
+
+bfc000a0 <next_icache_tag>:
+G:\0\2bluetooth_car\motor/init_caches.S:93
+
+next_icache_tag:
+	// Index Store Tag Cache Op
+	// Will invalidate the tag entry, clear the lock bit, and clear the LRF bit
+	cache   0x8, 0(a2)			// ICIndexStTag
+bfc000a0:	bcc80000 	cache	0x8,0(a2)
+G:\0\2bluetooth_car\motor/init_caches.S:94
+	add	    a3, -1				// Decrement set counter
+bfc000a4:	20e7ffff 	addi	a3,a3,-1
+G:\0\2bluetooth_car\motor/init_caches.S:95
+	bne     a3, zero, next_icache_tag
+bfc000a8:	14e0fffd 	bnez	a3,bfc000a0 <next_icache_tag>
+G:\0\2bluetooth_car\motor/init_caches.S:96
+	add     a2, v1				// Get next line address
+bfc000ac:	00c33020 	add	a2,a2,v1
+
+bfc000b0 <done_icache>:
+G:\0\2bluetooth_car\motor/init_caches.S:100
+
+done_icache:
+
+    jr      ra
+bfc000b0:	03e00008 	jr	ra
+G:\0\2bluetooth_car\motor/init_caches.S:101
+    nop
+bfc000b4:	00000000 	nop
+
+bfc000b8 <init_dcache>:
+G:\0\2bluetooth_car\motor/init_caches.S:110
+* init_dcache invalidates all data cache entries
+**************************************************************************************/
+
+LEAF(init_dcache)
+
+	mfc0	v0, C0_CONFIG1		// read C0_Config1
+bfc000b8:	40028001 	mfc0	v0,c0_config1
+G:\0\2bluetooth_car\motor/init_caches.S:113
+
+	// Isolate D$ Line Size
+	ext	    v1, v0, CFG1_DLSHIFT, 3		// extract DL
+bfc000bc:	7c431280 	ext	v1,v0,0xa,0x3
+G:\0\2bluetooth_car\motor/init_caches.S:116
+
+	// Skip ahead if No D$
+	beq	    v1, zero, done_dcache
+bfc000c0:	10600013 	beqz	v1,bfc00110 <done_dcache>
+G:\0\2bluetooth_car\motor/init_caches.S:117
+	nop
+bfc000c4:	00000000 	nop
+G:\0\2bluetooth_car\motor/init_caches.S:119
+
+	li	    a2, 2
+bfc000c8:	24060002 	li	a2,2
+G:\0\2bluetooth_car\motor/init_caches.S:120
+	sllv	v1, a2, v1			// Now have true D$ line size in bytes
+bfc000cc:	00661804 	sllv	v1,a2,v1
+G:\0\2bluetooth_car\motor/init_caches.S:122
+
+	ext	    a0, v0, CFG1_DSSHIFT, 3		// extract DS
+bfc000d0:	7c441340 	ext	a0,v0,0xd,0x3
+G:\0\2bluetooth_car\motor/init_caches.S:123
+	li	    a2, 64
+bfc000d4:	24060040 	li	a2,64
+G:\0\2bluetooth_car\motor/init_caches.S:124
+	sllv	a0, a2, a0	// D$ Sets per way
+bfc000d8:	00862004 	sllv	a0,a2,a0
+G:\0\2bluetooth_car\motor/init_caches.S:127
+
+	// Config1DA == D$ Assoc - 1
+	ext	    a1, v0, CFG1_DASHIFT, 3		// extract DA
+bfc000dc:	7c4511c0 	ext	a1,v0,0x7,0x3
+G:\0\2bluetooth_car\motor/init_caches.S:128
+	add	    a1, 1
+bfc000e0:	20a50001 	addi	a1,a1,1
+G:\0\2bluetooth_car\motor/init_caches.S:130
+
+	mul	    a0, a0, a1			// Get total number of sets
+bfc000e4:	70852002 	mul	a0,a0,a1
+G:\0\2bluetooth_car\motor/init_caches.S:132
+
+	lui	    a2, 0x8000		    // Get a KSeg0 address for cacheops
+bfc000e8:	3c068000 	lui	a2,0x8000
+G:\0\2bluetooth_car\motor/init_caches.S:135
+
+	// Clear TagLo/TagHi registers
+	mtc0	zero, C0_TAGLO		// write C0_TagLo
+bfc000ec:	4080e000 	mtc0	zero,c0_taglo
+G:\0\2bluetooth_car\motor/init_caches.S:136
+	mtc0	zero, C0_TAGHI		// write C0_TagHi
+bfc000f0:	4080e800 	mtc0	zero,c0_taghi
+G:\0\2bluetooth_car\motor/init_caches.S:137
+	mtc0	zero, C0_TAGLO, 2	// write C0_DTagLo
+bfc000f4:	4080e002 	mtc0	zero,c0_taglo1
+G:\0\2bluetooth_car\motor/init_caches.S:138
+	mtc0	zero, C0_TAGHI, 2	// write C0_DTagHi
+bfc000f8:	4080e802 	mtc0	zero,c0_taghi1
+G:\0\2bluetooth_car\motor/init_caches.S:140
+
+	move	a3, a0
+bfc000fc:	00803821 	move	a3,a0
+
+bfc00100 <next_dcache_tag>:
+G:\0\2bluetooth_car\motor/init_caches.S:146
+
+next_dcache_tag:
+	// Index Store Tag Cache Op
+	// Will invalidate the tag entry, clear the lock bit, and clear the LRF bit
+
+    cache	0x9, 0(a2)			// DCIndexStTag
+bfc00100:	bcc90000 	cache	0x9,0(a2)
+G:\0\2bluetooth_car\motor/init_caches.S:147
+	add	    a3, -1			    // Decrement set counter
+bfc00104:	20e7ffff 	addi	a3,a3,-1
+G:\0\2bluetooth_car\motor/init_caches.S:149
+
+	bne	    a3, zero, next_dcache_tag
+bfc00108:	14e0fffd 	bnez	a3,bfc00100 <next_dcache_tag>
+G:\0\2bluetooth_car\motor/init_caches.S:150
+	add	    a2, v1		    	// Get next line address
+bfc0010c:	00c33020 	add	a2,a2,v1
+
+bfc00110 <done_dcache>:
+G:\0\2bluetooth_car\motor/init_caches.S:153
+
+done_dcache:
+    jr      ra
+bfc00110:	03e00008 	jr	ra
+G:\0\2bluetooth_car\motor/init_caches.S:154
+    nop
+bfc00114:	00000000 	nop
+
+bfc00118 <change_k0_cca>:
+G:\0\2bluetooth_car\motor/init_caches.S:160
+END(init_dcache)
+
+LEAF(change_k0_cca)
+	// NOTE! This code must be executed in KSEG1 (not KSGE0 uncached)
+    // Set CCA for kseg0 to cacheable
+	mfc0	v0, C0_CONFIG	// read C0_Config
+bfc00118:	40028000 	mfc0	v0,c0_config
+G:\0\2bluetooth_car\motor/init_caches.S:161
+	li	v1, 3			// CCA for single-core processors
+bfc0011c:	24030003 	li	v1,3
+G:\0\2bluetooth_car\motor/init_caches.S:162
+      ins	v0, v1, 0, 3	// insert K0
+bfc00120:	7c621004 	ins	v0,v1,0x0,0x3
+G:\0\2bluetooth_car\motor/init_caches.S:163
+	mtc0	v0, C0_CONFIG	// write C0_Config
+bfc00124:	40828000 	mtc0	v0,c0_config
+G:\0\2bluetooth_car\motor/init_caches.S:164
+	jr.hb   ra
+bfc00128:	03e00408 	jr.hb	ra
+G:\0\2bluetooth_car\motor/init_caches.S:165
+    	nop
+bfc0012c:	00000000 	nop
+	...
+G:\0\2bluetooth_car\motor/boot.S:148
+**************************************************************************************/
+/* NOTE: the linker script must insure that this code starts at start + 0x200 so the exception */
+/* vectors will be addressed properly. All .org assume this! */
+/* TLB refill, 32 bit task. */
+.org 0x180						# interrupt exception
+	la a2,  __exception_entry   # prepare to enter the uart irq handler.
+bfc00180:	3c06bfc0 	lui	a2,0xbfc0
+bfc00184:	24c605c4 	addiu	a2,a2,1476
+G:\0\2bluetooth_car\motor/boot.S:149
+    jr a2
+bfc00188:	00c00008 	jr	a2
+G:\0\2bluetooth_car\motor/boot.S:150
+    nop
+bfc0018c:	00000000 	nop
+	...
+G:\0\2bluetooth_car\motor/boot.S:155
+
+
+.org 0x200                      # TLB refill, 32 bit task.
+	# display alternating one-zeros on board LEDs
+    li      k0, BOARD_16_LEDS_ADDR  # Board LEDs display
+bfc00200:	3c1ab060 	lui	k0,0xb060
+G:\0\2bluetooth_car\motor/boot.S:156
+    li      k1, 0x1111          # alternating one-zeros
+bfc00204:	241b1111 	li	k1,4369
+G:\0\2bluetooth_car\motor/boot.S:157
+    sw      k1, 0(k0)           # Write pattern to LEDs
+bfc00208:	af5b0000 	sw	k1,0(k0)
+G:\0\2bluetooth_car\motor/boot.S:158
+    eret
+bfc0020c:	42000018 	eret
+G:\0\2bluetooth_car\motor/boot.S:159
+    nop
+bfc00210:	00000000 	nop
+G:\0\2bluetooth_car\motor/boot.S:163
+	#la a2,  __exception_entry   # prepare to enter the uart irq handler.
+    #jr a2
+    #nop
+    sdbbp                       # This has the effect of starting the debugger
+bfc00214:	7000003f 	sdbbp
+	...
+G:\0\2bluetooth_car\motor/boot.S:168
+    nop
+
+.org 0x280                      # XTLB refill, 64 bit task. start + 0x280
+	# display alternating one-zeros on board LEDs
+    li      k0, BOARD_16_LEDS_ADDR  # Board LEDs display
+bfc00280:	3c1ab060 	lui	k0,0xb060
+G:\0\2bluetooth_car\motor/boot.S:169
+    li      k1, 0x3333          # alternating one-zeros
+bfc00284:	241b3333 	li	k1,13107
+G:\0\2bluetooth_car\motor/boot.S:170
+    sw      k1, 0(k0)           # Write pattern to LEDs
+bfc00288:	af5b0000 	sw	k1,0(k0)
+G:\0\2bluetooth_car\motor/boot.S:171
+    eret
+bfc0028c:	42000018 	eret
+G:\0\2bluetooth_car\motor/boot.S:172
+    nop
+bfc00290:	00000000 	nop
+G:\0\2bluetooth_car\motor/boot.S:173
+    sdbbp                       # This has the effect of starting the debugger
+bfc00294:	7000003f 	sdbbp
+	...
+G:\0\2bluetooth_car\motor/boot.S:178
+    nop
+
+
+.org 0x300                      # Cache error exception. start + 0x300
+    sdbbp                       # This has the effect of starting the debugger
+bfc00300:	7000003f 	sdbbp
+G:\0\2bluetooth_car\motor/boot.S:179
+    nop
+bfc00304:	00000000 	nop
+
+bfc00308 <init_tlb>:
+G:\0\2bluetooth_car\motor/init_tlb.S:57
+**************************************************************************************/
+LEAF(init_tlb)
+
+check_for_tlb:
+	// Determine if we have a TLB
+	mfc0    v1, C0_CONFIG			// read C0_Config
+bfc00308:	40038000 	mfc0	v1,c0_config
+G:\0\2bluetooth_car\motor/init_tlb.S:58
+	ext	    v1, v1, 7, 3			// extract MT field
+bfc0030c:	7c6311c0 	ext	v1,v1,0x7,0x3
+G:\0\2bluetooth_car\motor/init_tlb.S:59
+	li	    a3, 0x1					// load a 1 to check against
+bfc00310:	24070001 	li	a3,1
+G:\0\2bluetooth_car\motor/init_tlb.S:60
+	bne	    v1, a3, done_init_tlb
+bfc00314:	1467000f 	bne	v1,a3,bfc00354 <done_init_tlb>
+G:\0\2bluetooth_car\motor/init_tlb.S:61
+	mfc0    v0, C0_CONFIG1			// C0_Config1
+bfc00318:	40028001 	mfc0	v0,c0_config1
+G:\0\2bluetooth_car\motor/init_tlb.S:62
+	nop
+bfc0031c:	00000000 	nop
+
+bfc00320 <start_init_tlb>:
+G:\0\2bluetooth_car\motor/init_tlb.S:66
+
+start_init_tlb:
+	// Config1MMUSize == Number of TLB entries - 1
+	ext     v1, v0, CFG1_MMUSSHIFT, 6 // extract MMU Size
+bfc00320:	7c432e40 	ext	v1,v0,0x19,0x6
+G:\0\2bluetooth_car\motor/init_tlb.S:67
+	mtc0    zero, C0_ENTRYLO0		// write C0_EntryLo0
+bfc00324:	40801000 	mtc0	zero,c0_entrylo0
+G:\0\2bluetooth_car\motor/init_tlb.S:68
+	mtc0    zero, C0_ENTRYLO1		// write C0_EntryLo1
+bfc00328:	40801800 	mtc0	zero,c0_entrylo1
+G:\0\2bluetooth_car\motor/init_tlb.S:69
+	mtc0    zero, C0_PAGEMASK		// write C0_PageMask
+bfc0032c:	40802800 	mtc0	zero,c0_pagemask
+G:\0\2bluetooth_car\motor/init_tlb.S:70
+	mtc0    zero, C0_WIRED			// write C0_Wired
+bfc00330:	40803000 	mtc0	zero,c0_wired
+G:\0\2bluetooth_car\motor/init_tlb.S:71
+	li	    a0, 0x80000000
+bfc00334:	3c048000 	lui	a0,0x8000
+
+bfc00338 <next_tlb_entry_pair>:
+G:\0\2bluetooth_car\motor/init_tlb.S:74
+
+next_tlb_entry_pair:
+	mtc0    v1, C0_INDEX			// write C0_Index
+bfc00338:	40830000 	mtc0	v1,c0_index
+G:\0\2bluetooth_car\motor/init_tlb.S:75
+	mtc0	a0, C0_ENTRYHI			// write C0_EntryHi
+bfc0033c:	40845000 	mtc0	a0,c0_entryhi
+G:\0\2bluetooth_car\motor/init_tlb.S:76
+	ehb
+bfc00340:	000000c0 	ehb
+G:\0\2bluetooth_car\motor/init_tlb.S:77
+	tlbwi
+bfc00344:	42000002 	tlbwi
+G:\0\2bluetooth_car\motor/init_tlb.S:78
+	add	    a0, (2<<13)				// Add 8K to the address to avoid TLB conflict with previous entry
+bfc00348:	20844000 	addi	a0,a0,16384
+G:\0\2bluetooth_car\motor/init_tlb.S:80
+
+	bne		v1, zero, next_tlb_entry_pair
+bfc0034c:	1460fffa 	bnez	v1,bfc00338 <next_tlb_entry_pair>
+G:\0\2bluetooth_car\motor/init_tlb.S:81
+	add	    v1, -1
+bfc00350:	2063ffff 	addi	v1,v1,-1
+
+bfc00354 <done_init_tlb>:
+G:\0\2bluetooth_car\motor/init_tlb.S:84
+
+done_init_tlb:
+    jr      ra
+bfc00354:	03e00008 	jr	ra
+G:\0\2bluetooth_car\motor/init_tlb.S:85
+    nop
+bfc00358:	00000000 	nop
+	...
+G:\0\2bluetooth_car\motor/boot.S:186
+#include "init_tlb.S"
+
+
+.org 0x380    /* General exception. */
+	# disable interrupt
+	mfc0    k0, C0_STATUS
+bfc00380:	401a6000 	mfc0	k0,c0_status
+G:\0\2bluetooth_car\motor/boot.S:187
+	la		k1, 0xfffffffe
+bfc00384:	241bfffe 	li	k1,-2
+G:\0\2bluetooth_car\motor/boot.S:188
+	and		k0, k0, k1			# StatusIE = 0
+bfc00388:	035bd024 	and	k0,k0,k1
+G:\0\2bluetooth_car\motor/boot.S:189
+	mtc0	k0, C0_STATUS		# set the Status register to disable interrupt
+bfc0038c:	409a6000 	mtc0	k0,c0_status
+G:\0\2bluetooth_car\motor/boot.S:190
+	ehb
+bfc00390:	000000c0 	ehb
+G:\0\2bluetooth_car\motor/boot.S:192
+
+	la a2,  __exception_entry   # prepare to enter the uart irq handler.
+bfc00394:	3c06bfc0 	lui	a2,0xbfc0
+bfc00398:	24c605c4 	addiu	a2,a2,1476
+G:\0\2bluetooth_car\motor/boot.S:193
+    jr a2
+bfc0039c:	00c00008 	jr	a2
+G:\0\2bluetooth_car\motor/boot.S:194
+    nop
+bfc003a0:	00000000 	nop
+G:\0\2bluetooth_car\motor/boot.S:197
+
+    # display alternating one-zeros on board LEDs
+    li      k0, BOARD_16_LEDS_ADDR  # Board LEDs display
+bfc003a4:	3c1ab060 	lui	k0,0xb060
+G:\0\2bluetooth_car\motor/boot.S:198
+    li      k1, 0x5555          # alternating one-zeros
+bfc003a8:	241b5555 	li	k1,21845
+G:\0\2bluetooth_car\motor/boot.S:199
+    sw      k1, 0(k0)           # Write pattern to LEDs
+bfc003ac:	af5b0000 	sw	k1,0(k0)
+G:\0\2bluetooth_car\motor/boot.S:200
+    eret
+bfc003b0:	42000018 	eret
+	...
+G:\0\2bluetooth_car\motor/boot.S:205
+    nop
+
+.org 0x400    /* General interrupt. */
+    # display alternating one-zeros on board LEDs
+    li      k0, BOARD_16_LEDS_ADDR  # Board LEDs display
+bfc00400:	3c1ab060 	lui	k0,0xb060
+G:\0\2bluetooth_car\motor/boot.S:206
+    li      k1, 0x7777          # alternating one-zeros
+bfc00404:	241b7777 	li	k1,30583
+G:\0\2bluetooth_car\motor/boot.S:207
+    sw      k1, 0(k0)           # Write pattern to LEDs
+bfc00408:	af5b0000 	sw	k1,0(k0)
+G:\0\2bluetooth_car\motor/boot.S:208
+    eret
+bfc0040c:	42000018 	eret
+	...
+G:\0\2bluetooth_car\motor/boot.S:216
+
+# If you want the above code to fit into 1k flash you will need to leave out the
+# code below. This is the code that covers the debug exception which you normally will not get.
+
+.org 0x480 /* EJTAG debug exception (EJTAG Control Register[ProbTrap] == 0.) */
+    li      r24_malta_word, BOARD_16_LEDS_ADDR     # If post boot then $24 is clobbered.
+bfc00480:	3c18b060 	lui	t8,0xb060
+G:\0\2bluetooth_car\motor/boot.S:217
+    mtc0    a0, C0_DESAVE       # DeSave a0
+bfc00484:	4084f800 	mtc0	a0,c0_desave
+G:\0\2bluetooth_car\motor/boot.S:218
+    mfc0    a0, C0_DEPC         # Read DEPC
+bfc00488:	4004c000 	mfc0	a0,c0_depc
+G:\0\2bluetooth_car\motor/boot.S:219
+    sw      a0, 0(r24_malta_word)    # Display lower 16 bits of DEPC if there is not an EJTAG probe.
+bfc0048c:	af040000 	sw	a0,0(t8)
+G:\0\2bluetooth_car\motor/boot.S:220
+    mfc0    a0, C0_DESAVE       # Restore a0
+bfc00490:	4004f800 	mfc0	a0,c0_desave
+G:\0\2bluetooth_car\motor/boot.S:221
+1:  b       1b  /* Stay here */
+bfc00494:	1000ffff 	b	bfc00494 <done_init_tlb+0x140>
+G:\0\2bluetooth_car\motor/boot.S:222
+    nop
+bfc00498:	00000000 	nop
+
+bfc0049c <init_cp0>:
+G:\0\2bluetooth_car\motor/init_cp0.S:57
+**************************************************************************************/
+LEAF(init_cp0)
+
+    // Initialize Status
+	//li	v1, 0x00400404		// (M_StatusERL | M_StatusIPL1 | M_StatusBEV)
+	li	v1, 0x0040fc04			// (M_StatusERL | M_StatusIPL1~IPL6 | M_StatusBEV)
+bfc0049c:	3c030040 	lui	v1,0x40
+bfc004a0:	3463fc04 	ori	v1,v1,0xfc04
+G:\0\2bluetooth_car\motor/init_cp0.S:58
+	mtc0	v1, C0_STATUS		// write C0_Status
+bfc004a4:	40836000 	mtc0	v1,c0_status
+G:\0\2bluetooth_car\motor/init_cp0.S:61
+
+	// Initialize Watch registers if implemented.
+	mfc0	v0, C0_CONFIG1		// read C0_Config1
+bfc004a8:	40028001 	mfc0	v0,c0_config1
+G:\0\2bluetooth_car\motor/init_cp0.S:62
+	ext	v1, v0, 3, 1		// extract bit 3 WR (Watch registers implemented)
+bfc004ac:	7c4300c0 	ext	v1,v0,0x3,0x1
+G:\0\2bluetooth_car\motor/init_cp0.S:63
+	beq 	v1, zero, done_wr
+bfc004b0:	10600011 	beqz	v1,bfc004f8 <done_wr>
+G:\0\2bluetooth_car\motor/init_cp0.S:64
+	li    	v1, 0x7				// (M_WatchHiI | M_WatchHiR | M_WatchHiW)
+bfc004b4:	24030007 	li	v1,7
+G:\0\2bluetooth_car\motor/init_cp0.S:67
+
+	// Clear all possible Watch Status bits and disable watch exceptions
+	mtc0	v1, C0_WATCHHI		// write C0_WatchHi0
+bfc004b8:	40839800 	mtc0	v1,c0_watchhi
+G:\0\2bluetooth_car\motor/init_cp0.S:68
+	mtc0	zero, C0_WATCHLO	// write C0_WatchLo0
+bfc004bc:	40809000 	mtc0	zero,c0_watchlo
+G:\0\2bluetooth_car\motor/init_cp0.S:70
+
+	mtc0	v1, C0_WATCHHI, 1	// write C0_WatchHi1
+bfc004c0:	40839801 	mtc0	v1,c0_watchhi,1
+G:\0\2bluetooth_car\motor/init_cp0.S:71
+	mtc0	zero, C0_WATCHLO, 1	// write C0_WatchLo1
+bfc004c4:	40809001 	mtc0	zero,c0_watchlo,1
+G:\0\2bluetooth_car\motor/init_cp0.S:73
+
+	mtc0	v1, C0_WATCHHI, 2	// write C0_WatchHi2
+bfc004c8:	40839802 	mtc0	v1,c0_watchhi,2
+G:\0\2bluetooth_car\motor/init_cp0.S:74
+	mtc0	zero, C0_WATCHLO, 2	// write C0_WatchLo2
+bfc004cc:	40809002 	mtc0	zero,c0_watchlo,2
+G:\0\2bluetooth_car\motor/init_cp0.S:76
+
+	mtc0	v1, C0_WATCHHI, 3	// write C0_WatchHi3
+bfc004d0:	40839803 	mtc0	v1,c0_watchhi,3
+G:\0\2bluetooth_car\motor/init_cp0.S:77
+	mtc0	zero, C0_WATCHLO, 3	// write C0_WatchLo3
+bfc004d4:	40809003 	mtc0	zero,c0_watchlo,3
+G:\0\2bluetooth_car\motor/init_cp0.S:79
+
+	mtc0	v1, C0_WATCHHI, 4	// write C0_WatchHi4
+bfc004d8:	40839804 	mtc0	v1,c0_watchhi,4
+G:\0\2bluetooth_car\motor/init_cp0.S:80
+	mtc0	zero, C0_WATCHLO, 4	// write C0_WatchLo4
+bfc004dc:	40809004 	mtc0	zero,c0_watchlo,4
+G:\0\2bluetooth_car\motor/init_cp0.S:82
+
+	mtc0	v1, C0_WATCHHI, 5	// write C0_WatchHi5
+bfc004e0:	40839805 	mtc0	v1,c0_watchhi,5
+G:\0\2bluetooth_car\motor/init_cp0.S:83
+	mtc0	zero, C0_WATCHLO, 5	// write C0_WatchLo5
+bfc004e4:	40809005 	mtc0	zero,c0_watchlo,5
+G:\0\2bluetooth_car\motor/init_cp0.S:85
+
+	mtc0	v1, C0_WATCHHI, 6	// write C0_WatchHi6
+bfc004e8:	40839806 	mtc0	v1,c0_watchhi,6
+G:\0\2bluetooth_car\motor/init_cp0.S:86
+	mtc0	zero, C0_WATCHLO, 6	// write C0_WatchLo6
+bfc004ec:	40809006 	mtc0	zero,c0_watchlo,6
+G:\0\2bluetooth_car\motor/init_cp0.S:88
+
+	mtc0	v1, C0_WATCHHI, 7	// write C0_WatchHi7
+bfc004f0:	40839807 	mtc0	v1,c0_watchhi,7
+G:\0\2bluetooth_car\motor/init_cp0.S:89
+	mtc0	zero, C0_WATCHLO, 7	// write C0_WatchLo7
+bfc004f4:	40809007 	mtc0	zero,c0_watchlo,7
+
+bfc004f8 <done_wr>:
+G:\0\2bluetooth_car\motor/init_cp0.S:94
+
+done_wr:
+
+	// Clear WP bit to avoid watch exception upon user code entry, IV, and software interrupts.
+	mtc0	zero, C0_CAUSE		// write C0_Cause: Init AFTER init of CP0 WatchHi/Lo registers.
+bfc004f8:	40806800 	mtc0	zero,c0_cause
+G:\0\2bluetooth_car\motor/init_cp0.S:97
+
+	// Clear timer interrupt. (Count was cleared at the reset vector to allow timing boot.)
+	mtc0	zero, C0_COMPARE	// write C0_Compare
+bfc004fc:	40805800 	mtc0	zero,c0_compare
+G:\0\2bluetooth_car\motor/init_cp0.S:99
+
+    jr      ra
+bfc00500:	03e00008 	jr	ra
+G:\0\2bluetooth_car\motor/init_cp0.S:100
+	nop
+bfc00504:	00000000 	nop
+
+bfc00508 <_start>:
+G:\0\2bluetooth_car\motor/mini_crt0.S:60
+/**************************************************************************************
+**************************************************************************************/
+LEAF(_start)
+
+    # Set the global pointer register address to _gp - value set in linker .ld file
+    la      gp, _gp             # All share globals.
+bfc00508:	3c1c8001 	lui	gp,0x8001
+bfc0050c:	279ca388 	addiu	gp,gp,-23672
+G:\0\2bluetooth_car\motor/mini_crt0.S:63
+
+    # Set up the stack pointer register to STACK_BASE_ADDR defined in boot.h
+    li      sp, STACK_BASE_ADDR # Set up stack base.
+bfc00510:	3c1dbfc0 	lui	sp,0xbfc0
+bfc00514:	37bd0900 	ori	sp,sp,0x900
+G:\0\2bluetooth_car\motor/mini_crt0.S:66
+
+    # Make a stack frame; must be a multiple of 8-bytes
+    addiu   sp, sp, -8
+bfc00518:	27bdfff8 	addiu	sp,sp,-8
+G:\0\2bluetooth_car\motor/mini_crt0.S:69
+
+    # Preserve return address over the call to main
+    sw      ra, 0(sp)
+bfc0051c:	afbf0000 	sw	ra,0(sp)
+G:\0\2bluetooth_car\motor/mini_crt0.S:71
+
+    li      s1_all_ones, 0xffffffff
+bfc00520:	2411ffff 	li	s1,-1
+
+bfc00524 <zero_bss>:
+G:\0\2bluetooth_car\motor/mini_crt0.S:74
+
+zero_bss:
+    la      t1_temp_addr, _fbss
+bfc00524:	3c098000 	lui	t1,0x8000
+bfc00528:	25292388 	addiu	t1,t1,9096
+G:\0\2bluetooth_car\motor/mini_crt0.S:75
+    ins     t1_temp_addr, s1_all_ones, 29, 1
+bfc0052c:	7e29ef44 	ins	t1,s1,0x1d,0x1
+G:\0\2bluetooth_car\motor/mini_crt0.S:76
+    la      t3_temp_mark, _end
+bfc00530:	3c0b8000 	lui	t3,0x8000
+bfc00534:	256b23a4 	addiu	t3,t3,9124
+G:\0\2bluetooth_car\motor/mini_crt0.S:77
+    ins     t3_temp_mark, s1_all_ones, 29, 1
+bfc00538:	7e2bef44 	ins	t3,s1,0x1d,0x1
+G:\0\2bluetooth_car\motor/mini_crt0.S:78
+    beq     t1_temp_addr, t3_temp_mark, invoke_main
+bfc0053c:	112b0005 	beq	t1,t3,bfc00554 <invoke_main>
+G:\0\2bluetooth_car\motor/mini_crt0.S:79
+    nop
+bfc00540:	00000000 	nop
+
+bfc00544 <next_bss_word>:
+G:\0\2bluetooth_car\motor/mini_crt0.S:81
+next_bss_word:
+    sw      zero, 0(t1_temp_addr)
+bfc00544:	ad200000 	sw	zero,0(t1)
+G:\0\2bluetooth_car\motor/mini_crt0.S:82
+    addiu   t1_temp_addr, 4
+bfc00548:	25290004 	addiu	t1,t1,4
+G:\0\2bluetooth_car\motor/mini_crt0.S:83
+    bne     t1_temp_addr, t3_temp_mark, next_bss_word
+bfc0054c:	152bfffd 	bne	t1,t3,bfc00544 <next_bss_word>
+G:\0\2bluetooth_car\motor/mini_crt0.S:84
+    nop
+bfc00550:	00000000 	nop
+
+bfc00554 <invoke_main>:
+G:\0\2bluetooth_car\motor/mini_crt0.S:90
+
+
+invoke_main:
+	# Create interrupt control
+	#
+	lui		v0, 0xbfc0
+bfc00554:	3c02bfc0 	lui	v0,0xbfc0
+G:\0\2bluetooth_car\motor/mini_crt0.S:91
+	mtc0	v0, C0_EBASE		# set the interrupt base address at 0xbfc0_0000
+bfc00558:	40827801 	mtc0	v0,c0_ebase
+G:\0\2bluetooth_car\motor/mini_crt0.S:92
+	ehb
+bfc0055c:	000000c0 	ehb
+G:\0\2bluetooth_car\motor/mini_crt0.S:94
+
+	mfc0	v0, C0_CAUSE
+bfc00560:	40026800 	mfc0	v0,c0_cause
+G:\0\2bluetooth_car\motor/mini_crt0.S:95
+	la		v1, 0xff7fffff
+bfc00564:	3c03ff7f 	lui	v1,0xff7f
+bfc00568:	3463ffff 	ori	v1,v1,0xffff
+G:\0\2bluetooth_car\motor/mini_crt0.S:96
+	and		v0, v0, v1
+bfc0056c:	00431024 	and	v0,v0,v1
+G:\0\2bluetooth_car\motor/mini_crt0.S:98
+	#mtc0	v0, C0_CAUSE		# CauseIV = 0, interrupt offset at 0x180
+	ehb
+bfc00570:	000000c0 	ehb
+G:\0\2bluetooth_car\motor/mini_crt0.S:100
+
+	mfc0	v0, C0_STATUS
+bfc00574:	40026000 	mfc0	v0,c0_status
+G:\0\2bluetooth_car\motor/mini_crt0.S:103
+	#la		v1, 0xffbffff9
+	#and		v0, v0, v1			# StatusBEV = 0, StatusEXL = 0, StatusERL = 0
+	la		v1, 0x1
+bfc00578:	24030001 	li	v1,1
+G:\0\2bluetooth_car\motor/mini_crt0.S:104
+	or		v0, v0, v1			# StatusIE = 1
+bfc0057c:	00431025 	or	v0,v0,v1
+G:\0\2bluetooth_car\motor/mini_crt0.S:105
+	mtc0	v0, C0_STATUS		# set the Status register to enable interrupt
+bfc00580:	40826000 	mtc0	v0,c0_status
+G:\0\2bluetooth_car\motor/mini_crt0.S:106
+	ehb
+bfc00584:	000000c0 	ehb
+G:\0\2bluetooth_car\motor/mini_crt0.S:108
+
+	mfc0	v0,C0_STATUS		# M_StatusEXL = 0
+bfc00588:	40026000 	mfc0	v0,c0_status
+G:\0\2bluetooth_car\motor/mini_crt0.S:109
+	lui		v1,0x0
+bfc0058c:	3c030000 	lui	v1,0x0
+G:\0\2bluetooth_car\motor/mini_crt0.S:110
+	addiu	v1,v1,-3
+bfc00590:	2463fffd 	addiu	v1,v1,-3
+G:\0\2bluetooth_car\motor/mini_crt0.S:111
+	and		v0,v0,v1
+bfc00594:	00431024 	and	v0,v0,v1
+G:\0\2bluetooth_car\motor/mini_crt0.S:112
+	mtc0	v0,C0_STATUS
+bfc00598:	40826000 	mtc0	v0,c0_status
+G:\0\2bluetooth_car\motor/mini_crt0.S:113
+	ehb
+bfc0059c:	000000c0 	ehb
+G:\0\2bluetooth_car\motor/mini_crt0.S:116
+
+
+    la      t0, main
+bfc005a0:	3c088000 	lui	t0,0x8000
+bfc005a4:	25082160 	addiu	t0,t0,8544
+G:\0\2bluetooth_car\motor/mini_crt0.S:118
+    # Create space for the o32 argument stack
+    addiu   sp, sp, -16
+bfc005a8:	27bdfff0 	addiu	sp,sp,-16
+G:\0\2bluetooth_car\motor/mini_crt0.S:120
+    # Call main
+    jalr    t0
+bfc005ac:	0100f809 	jalr	t0
+G:\0\2bluetooth_car\motor/mini_crt0.S:121
+    nop
+bfc005b0:	00000000 	nop
+G:\0\2bluetooth_car\motor/mini_crt0.S:123
+
+    lw      ra, 0(sp)
+bfc005b4:	8fbf0000 	lw	ra,0(sp)
+G:\0\2bluetooth_car\motor/mini_crt0.S:124
+    addiu   sp, sp, 8
+bfc005b8:	27bd0008 	addiu	sp,sp,8
+G:\0\2bluetooth_car\motor/mini_crt0.S:125
+    jr      ra
+bfc005bc:	03e00008 	jr	ra
+G:\0\2bluetooth_car\motor/mini_crt0.S:126
+    nop
+bfc005c0:	00000000 	nop
+
+bfc005c4 <__exception_entry>:
+G:\0\2bluetooth_car\motor/exception_entry.S:55
+
+/**************************************************************************************
+**************************************************************************************/
+LEAF(__exception_entry)
+
+	move	k1,sp
+bfc005c4:	03a0d821 	move	k1,sp
+G:\0\2bluetooth_car\motor/exception_entry.S:56
+	addiu	sp, sp, -176
+bfc005c8:	27bdff50 	addiu	sp,sp,-176
+G:\0\2bluetooth_car\motor/exception_entry.S:58
+	#sw	at, 16(sp)
+	sw	v0, 20(sp)
+bfc005cc:	afa20014 	sw	v0,20(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:59
+	sw	v1, 24(sp)
+bfc005d0:	afa30018 	sw	v1,24(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:60
+	sw	a0, 28(sp)
+bfc005d4:	afa4001c 	sw	a0,28(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:61
+	sw	a1, 32(sp)
+bfc005d8:	afa50020 	sw	a1,32(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:62
+	sw	a2, 36(sp)
+bfc005dc:	afa60024 	sw	a2,36(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:63
+	sw	a3, 40(sp)
+bfc005e0:	afa70028 	sw	a3,40(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:64
+	sw	t0, 44(sp)
+bfc005e4:	afa8002c 	sw	t0,44(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:65
+	sw	t1, 48(sp)
+bfc005e8:	afa90030 	sw	t1,48(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:66
+	sw	t2, 52(sp)
+bfc005ec:	afaa0034 	sw	t2,52(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:67
+	sw	t3, 56(sp)
+bfc005f0:	afab0038 	sw	t3,56(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:68
+	sw	t4, 60(sp)
+bfc005f4:	afac003c 	sw	t4,60(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:69
+	sw	t5, 64(sp)
+bfc005f8:	afad0040 	sw	t5,64(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:70
+	sw	t6, 68(sp)
+bfc005fc:	afae0044 	sw	t6,68(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:71
+	sw	t7, 72(sp)
+bfc00600:	afaf0048 	sw	t7,72(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:72
+	sw	s0, 76(sp)
+bfc00604:	afb0004c 	sw	s0,76(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:73
+	sw	s1, 80(sp)
+bfc00608:	afb10050 	sw	s1,80(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:74
+	sw	s2, 84(sp)
+bfc0060c:	afb20054 	sw	s2,84(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:75
+	sw	s3, 88(sp)
+bfc00610:	afb30058 	sw	s3,88(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:76
+	sw	s4, 92(sp)
+bfc00614:	afb4005c 	sw	s4,92(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:77
+	sw	s5, 96(sp)
+bfc00618:	afb50060 	sw	s5,96(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:78
+	sw	s6, 100(sp)
+bfc0061c:	afb60064 	sw	s6,100(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:79
+	sw	s7, 104(sp)
+bfc00620:	afb70068 	sw	s7,104(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:80
+	sw	t8, 108(sp)
+bfc00624:	afb8006c 	sw	t8,108(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:81
+	sw	t9, 112(sp)
+bfc00628:	afb90070 	sw	t9,112(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:82
+	sw	k0, 116(sp)
+bfc0062c:	afba0074 	sw	k0,116(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:83
+	sw	gp, 124(sp)
+bfc00630:	afbc007c 	sw	gp,124(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:84
+	sw	k1, 128(sp)
+bfc00634:	afbb0080 	sw	k1,128(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:85
+	sw	s8, 132(sp)
+bfc00638:	afbe0084 	sw	s8,132(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:86
+	sw	ra, 136(sp)
+bfc0063c:	afbf0088 	sw	ra,136(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:87
+	sw	zero,156(sp)
+bfc00640:	afa0009c 	sw	zero,156(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:88
+	mfhi	t1
+bfc00644:	00004810 	mfhi	t1
+G:\0\2bluetooth_car\motor/exception_entry.S:89
+	mflo	t2
+bfc00648:	00005012 	mflo	t2
+G:\0\2bluetooth_car\motor/exception_entry.S:90
+	sw	t1,148(sp)
+bfc0064c:	afa90094 	sw	t1,148(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:91
+	sw	t2,152(sp)
+bfc00650:	afaa0098 	sw	t2,152(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:92
+	mfc0	ra,C0_EPC
+bfc00654:	401f7000 	mfc0	ra,c0_epc
+G:\0\2bluetooth_car\motor/exception_entry.S:93
+	mfc0	s3,C0_CAUSE
+bfc00658:	40136800 	mfc0	s3,c0_cause
+G:\0\2bluetooth_car\motor/exception_entry.S:94
+	sw	ra,140(sp)
+bfc0065c:	afbf008c 	sw	ra,140(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:95
+	mfc0	t1,C0_BADVADDR
+bfc00660:	40094000 	mfc0	t1,c0_badvaddr
+G:\0\2bluetooth_car\motor/exception_entry.S:96
+	sw	t1,144(sp)
+bfc00664:	afa90090 	sw	t1,144(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:97
+	sw	s3,164(sp)
+bfc00668:	afb300a4 	sw	s3,164(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:98
+	move	t3,zero
+bfc0066c:	00005821 	move	t3,zero
+G:\0\2bluetooth_car\motor/exception_entry.S:99
+	move	t4,zero
+bfc00670:	00006021 	move	t4,zero
+G:\0\2bluetooth_car\motor/exception_entry.S:100
+	mfc0	t1,C0_CONFIG3
+bfc00674:	40098003 	mfc0	t1,c0_config3
+G:\0\2bluetooth_car\motor/exception_entry.S:101
+	ext	t2,t1,0x1b,0x1
+bfc00678:	7d2a06c0 	ext	t2,t1,0x1b,0x1
+G:\0\2bluetooth_car\motor/exception_entry.S:102
+	beqz	t2, 1f
+bfc0067c:	11400001 	beqz	t2,bfc00684 <__exception_entry+0xc0>
+G:\0\2bluetooth_car\motor/exception_entry.S:103
+	mfc0	t3,$8,2
+bfc00680:	400b4002 	mfc0	t3,$8,2
+G:\0\2bluetooth_car\motor/exception_entry.S:105
+1:
+	ext	t1,t1,0x1a,0x1
+bfc00684:	7d290680 	ext	t1,t1,0x1a,0x1
+G:\0\2bluetooth_car\motor/exception_entry.S:106
+	beqz	t1, 2f
+bfc00688:	11200001 	beqz	t1,bfc00690 <__exception_entry+0xcc>
+G:\0\2bluetooth_car\motor/exception_entry.S:107
+	mfc0	t4,$8,1
+bfc0068c:	400c4001 	mfc0	t4,$8,1
+G:\0\2bluetooth_car\motor/exception_entry.S:109
+2:
+	sw	t3,172(sp)
+bfc00690:	afab00ac 	sw	t3,172(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:110
+	sw	t4,168(sp)
+bfc00694:	afac00a8 	sw	t4,168(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:111
+	move	a0,sp
+bfc00698:	03a02021 	move	a0,sp
+G:\0\2bluetooth_car\motor/exception_entry.S:112
+	mfc0	s5,C0_STATUS
+bfc0069c:	40156000 	mfc0	s5,c0_status
+G:\0\2bluetooth_car\motor/exception_entry.S:113
+	lui	t1,0x0
+bfc006a0:	3c090000 	lui	t1,0x0
+G:\0\2bluetooth_car\motor/exception_entry.S:114
+	addiu	t1,t1,-3
+bfc006a4:	2529fffd 	addiu	t1,t1,-3
+G:\0\2bluetooth_car\motor/exception_entry.S:115
+	and	s5,s5,t1
+bfc006a8:	02a9a824 	and	s5,s5,t1
+G:\0\2bluetooth_car\motor/exception_entry.S:116
+	mtc0	s5,C0_STATUS
+bfc006ac:	40956000 	mtc0	s5,c0_status
+G:\0\2bluetooth_car\motor/exception_entry.S:117
+	sw	s5,160(sp)
+bfc006b0:	afb500a0 	sw	s5,160(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:119
+
+	la  t9, _mips_handle_irq
+bfc006b4:	3c198000 	lui	t9,0x8000
+bfc006b8:	27391cd4 	addiu	t9,t9,7380
+G:\0\2bluetooth_car\motor/exception_entry.S:120
+	andi	a1,s3,0x7c
+bfc006bc:	3265007c 	andi	a1,s3,0x7c
+G:\0\2bluetooth_car\motor/exception_entry.S:121
+	addiu	a0,a0,16
+bfc006c0:	24840010 	addiu	a0,a0,16
+G:\0\2bluetooth_car\motor/exception_entry.S:122
+	srl	a1,a1,0x2
+bfc006c4:	00052882 	srl	a1,a1,0x2
+G:\0\2bluetooth_car\motor/exception_entry.S:123
+	jalr  t9
+bfc006c8:	0320f809 	jalr	t9
+G:\0\2bluetooth_car\motor/exception_entry.S:124
+	nop
+bfc006cc:	00000000 	nop
+G:\0\2bluetooth_car\motor/exception_entry.S:128
+
+
+
+	lw	t1,148(sp)
+bfc006d0:	8fa90094 	lw	t1,148(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:129
+	lw	t2,152(sp)
+bfc006d4:	8faa0098 	lw	t2,152(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:130
+	mthi	t1
+bfc006d8:	01200011 	mthi	t1
+G:\0\2bluetooth_car\motor/exception_entry.S:131
+	mtlo	t2
+bfc006dc:	01400013 	mtlo	t2
+G:\0\2bluetooth_car\motor/exception_entry.S:132
+	lw	s5,160(sp)
+bfc006e0:	8fb500a0 	lw	s5,160(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:133
+	mtc0	s5,C0_STATUS
+bfc006e4:	40956000 	mtc0	s5,c0_status
+G:\0\2bluetooth_car\motor/exception_entry.S:134
+	lw	s6,140(sp)
+bfc006e8:	8fb6008c 	lw	s6,140(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:135
+	mtc0	s6,C0_EPC
+bfc006ec:	40967000 	mtc0	s6,c0_epc
+G:\0\2bluetooth_car\motor/exception_entry.S:137
+	#lw	at,16(sp)
+	lw	v0,20(sp)
+bfc006f0:	8fa20014 	lw	v0,20(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:138
+	lw	v1,24(sp)
+bfc006f4:	8fa30018 	lw	v1,24(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:139
+	lw	a0,28(sp)
+bfc006f8:	8fa4001c 	lw	a0,28(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:140
+	lw	a1,32(sp)
+bfc006fc:	8fa50020 	lw	a1,32(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:141
+	lw	a2,36(sp)
+bfc00700:	8fa60024 	lw	a2,36(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:142
+	lw	a3,40(sp)
+bfc00704:	8fa70028 	lw	a3,40(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:143
+	lw	t0,44(sp)
+bfc00708:	8fa8002c 	lw	t0,44(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:144
+	lw	t1,48(sp)
+bfc0070c:	8fa90030 	lw	t1,48(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:145
+	lw	t2,52(sp)
+bfc00710:	8faa0034 	lw	t2,52(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:146
+	lw	t3,56(sp)
+bfc00714:	8fab0038 	lw	t3,56(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:147
+	lw	t4,60(sp)
+bfc00718:	8fac003c 	lw	t4,60(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:148
+	lw	t5,64(sp)
+bfc0071c:	8fad0040 	lw	t5,64(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:149
+	lw	t6,68(sp)
+bfc00720:	8fae0044 	lw	t6,68(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:150
+	lw	t7,72(sp)
+bfc00724:	8faf0048 	lw	t7,72(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:151
+	lw	s0,76(sp)
+bfc00728:	8fb0004c 	lw	s0,76(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:152
+	lw	s1,80(sp)
+bfc0072c:	8fb10050 	lw	s1,80(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:153
+	lw	s2,84(sp)
+bfc00730:	8fb20054 	lw	s2,84(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:154
+	lw	s3,88(sp)
+bfc00734:	8fb30058 	lw	s3,88(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:155
+	lw	s4,92(sp)
+bfc00738:	8fb4005c 	lw	s4,92(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:156
+	lw	s5,96(sp)
+bfc0073c:	8fb50060 	lw	s5,96(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:157
+	lw	s6,100(sp)
+bfc00740:	8fb60064 	lw	s6,100(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:158
+	lw	s7,104(sp)
+bfc00744:	8fb70068 	lw	s7,104(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:159
+	lw	t8,108(sp)
+bfc00748:	8fb8006c 	lw	t8,108(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:160
+	lw	t9,112(sp)
+bfc0074c:	8fb90070 	lw	t9,112(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:161
+	lw	k0,116(sp)
+bfc00750:	8fba0074 	lw	k0,116(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:162
+	lw	k1,120(sp)
+bfc00754:	8fbb0078 	lw	k1,120(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:163
+	lw	gp,124(sp)
+bfc00758:	8fbc007c 	lw	gp,124(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:164
+	lw	s8,132(sp)
+bfc0075c:	8fbe0084 	lw	s8,132(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:165
+	lw	ra,136(sp)
+bfc00760:	8fbf0088 	lw	ra,136(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:166
+	lw	sp,128(sp)
+bfc00764:	8fbd0080 	lw	sp,128(sp)
+G:\0\2bluetooth_car\motor/exception_entry.S:167
+  mfc0	k1,C0_STATUS
+bfc00768:	401b6000 	mfc0	k1,c0_status
+G:\0\2bluetooth_car\motor/exception_entry.S:168
+  ori k1, 0x1
+bfc0076c:	377b0001 	ori	k1,k1,0x1
+G:\0\2bluetooth_car\motor/exception_entry.S:169
+  mtc0  k1, C0_STATUS
+bfc00770:	409b6000 	mtc0	k1,c0_status
+G:\0\2bluetooth_car\motor/exception_entry.S:170
+	eret
+bfc00774:	42000018 	eret
+	...
+
+Disassembly of section .text_ram:
+
+80001000 <delay>:
+delay():
+G:\0\2bluetooth_car\motor/main.c:146
+	}
+
+	return 0;
+}
+
+void delay() {
+80001000:	27bdfff8 	addiu	sp,sp,-8
+G:\0\2bluetooth_car\motor/main.c:149
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001004:	afa00000 	sw	zero,0(sp)
+80001008:	8fa20000 	lw	v0,0(sp)
+8000100c:	2c4203e8 	sltiu	v0,v0,1000
+80001010:	10400008 	beqz	v0,80001034 <delay+0x34>
+80001014:	00000000 	nop
+G:\0\2bluetooth_car\motor/main.c:149 (discriminator 3)
+80001018:	8fa20000 	lw	v0,0(sp)
+8000101c:	24420001 	addiu	v0,v0,1
+80001020:	afa20000 	sw	v0,0(sp)
+80001024:	8fa20000 	lw	v0,0(sp)
+80001028:	2c4203e8 	sltiu	v0,v0,1000
+8000102c:	1440fffa 	bnez	v0,80001018 <delay+0x18>
+80001030:	00000000 	nop
+G:\0\2bluetooth_car\motor/main.c:150
+}
+80001034:	03e00008 	jr	ra
+80001038:	27bd0008 	addiu	sp,sp,8
+
+8000103c <uart_outbyte>:
+uart_outbyte():
+G:\0\2bluetooth_car\motor/main.c:152
+
+void uart_outbyte(char c) {
+8000103c:	27bdfff8 	addiu	sp,sp,-8
+G:\0\2bluetooth_car\motor/main.c:153
+	*WRITE_IO(UART_BASE + thr) = (unsigned int) c;
+80001040:	3c02b040 	lui	v0,0xb040
+G:\0\2bluetooth_car\motor/main.c:152
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+}
+
+void uart_outbyte(char c) {
+80001044:	308400ff 	andi	a0,a0,0xff
+G:\0\2bluetooth_car\motor/main.c:153
+	*WRITE_IO(UART_BASE + thr) = (unsigned int) c;
+80001048:	ac441000 	sw	a0,4096(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+8000104c:	afa00000 	sw	zero,0(sp)
+80001050:	8fa20000 	lw	v0,0(sp)
+80001054:	2c4203e8 	sltiu	v0,v0,1000
+80001058:	10400008 	beqz	v0,8000107c <uart_outbyte+0x40>
+8000105c:	00000000 	nop
+80001060:	8fa20000 	lw	v0,0(sp)
+80001064:	24420001 	addiu	v0,v0,1
+80001068:	afa20000 	sw	v0,0(sp)
+8000106c:	8fa20000 	lw	v0,0(sp)
+80001070:	2c4203e8 	sltiu	v0,v0,1000
+80001074:	1440fffa 	bnez	v0,80001060 <uart_outbyte+0x24>
+80001078:	00000000 	nop
+uart_outbyte():
+G:\0\2bluetooth_car\motor/main.c:155
+}
+
+void uart_outbyte(char c) {
+	*WRITE_IO(UART_BASE + thr) = (unsigned int) c;
+	delay( );
+}
+8000107c:	03e00008 	jr	ra
+80001080:	27bd0008 	addiu	sp,sp,8
+
+80001084 <uart_inbyte>:
+uart_inbyte():
+G:\0\2bluetooth_car\motor/main.c:160
+
+char uart_inbyte(void) {
+	unsigned int RecievedByte;
+
+	while(!((*READ_IO(UART_BASE + lsr) & 0x00000001)==0x00000001));
+80001084:	3c03b040 	lui	v1,0xb040
+G:\0\2bluetooth_car\motor/main.c:160 (discriminator 1)
+80001088:	8c621014 	lw	v0,4116(v1)
+8000108c:	30420001 	andi	v0,v0,0x1
+80001090:	1040fffd 	beqz	v0,80001088 <uart_inbyte+0x4>
+80001094:	3c02b040 	lui	v0,0xb040
+G:\0\2bluetooth_car\motor/main.c:162
+
+	RecievedByte = *READ_IO(UART_BASE + rbr);
+80001098:	8c421000 	lw	v0,4096(v0)
+G:\0\2bluetooth_car\motor/main.c:165
+
+	return (char)RecievedByte;
+}
+8000109c:	03e00008 	jr	ra
+800010a0:	304200ff 	andi	v0,v0,0xff
+
+800010a4 <uart_print>:
+uart_print():
+G:\0\2bluetooth_car\motor/main.c:169
+
+void uart_print(const char *ptr)
+{
+	while (*ptr) {
+800010a4:	90820000 	lbu	v0,0(a0)
+800010a8:	10400014 	beqz	v0,800010fc <uart_print+0x58>
+800010ac:	3c03b040 	lui	v1,0xb040
+G:\0\2bluetooth_car\motor/main.c:168
+
+	return (char)RecievedByte;
+}
+
+void uart_print(const char *ptr)
+{
+800010b0:	27bdfff8 	addiu	sp,sp,-8
+uart_outbyte():
+G:\0\2bluetooth_car\motor/main.c:153
+
+	for (j = 0; j < (1000); j++) ;	// delay
+}
+
+void uart_outbyte(char c) {
+	*WRITE_IO(UART_BASE + thr) = (unsigned int) c;
+800010b4:	ac621000 	sw	v0,4096(v1)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+800010b8:	afa00000 	sw	zero,0(sp)
+800010bc:	8fa20000 	lw	v0,0(sp)
+800010c0:	2c4203e8 	sltiu	v0,v0,1000
+800010c4:	50400009 	beqzl	v0,800010ec <uart_print+0x48>
+800010c8:	24840001 	addiu	a0,a0,1
+800010cc:	8fa20000 	lw	v0,0(sp)
+800010d0:	24420001 	addiu	v0,v0,1
+800010d4:	afa20000 	sw	v0,0(sp)
+800010d8:	8fa20000 	lw	v0,0(sp)
+800010dc:	2c4203e8 	sltiu	v0,v0,1000
+800010e0:	1440fffa 	bnez	v0,800010cc <uart_print+0x28>
+800010e4:	00000000 	nop
+uart_print():
+G:\0\2bluetooth_car\motor/main.c:171
+
+void uart_print(const char *ptr)
+{
+	while (*ptr) {
+		uart_outbyte (*ptr);
+		ptr++;
+800010e8:	24840001 	addiu	a0,a0,1
+G:\0\2bluetooth_car\motor/main.c:169
+	return (char)RecievedByte;
+}
+
+void uart_print(const char *ptr)
+{
+	while (*ptr) {
+800010ec:	90820000 	lbu	v0,0(a0)
+800010f0:	1440fff0 	bnez	v0,800010b4 <uart_print+0x10>
+800010f4:	00000000 	nop
+G:\0\2bluetooth_car\motor/main.c:173
+		uart_outbyte (*ptr);
+		ptr++;
+	}
+}
+800010f8:	27bd0008 	addiu	sp,sp,8
+800010fc:	03e00008 	jr	ra
+80001100:	00000000 	nop
+
+80001104 <_go>:
+_go():
+G:\0\2bluetooth_car\motor/main.c:246
+}
+
+void _go(void)
+{
+	int direction = 0;
+	direction = direction | (gear_rf>=0?rf_f:rf_b);
+80001104:	8f848010 	lw	a0,-32752(gp)
+80001108:	24030022 	li	v1,34
+8000110c:	240200a0 	li	v0,160
+80001110:	28840000 	slti	a0,a0,0
+80001114:	0064100b 	movn	v0,v1,a0
+80001118:	24050090 	li	a1,144
+8000111c:	24030012 	li	v1,18
+80001120:	0064280b 	movn	a1,v1,a0
+G:\0\2bluetooth_car\motor/main.c:247
+	direction = direction | (gear_rb>=0?rb_f:rb_b);
+80001124:	8f838008 	lw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:248
+	direction = direction | (gear_lf>=0?lf_f:lf_b);
+80001128:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:244
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+	return;
+}
+
+void _go(void)
+{
+8000112c:	27bdffe8 	addiu	sp,sp,-24
+G:\0\2bluetooth_car\motor/main.c:247
+	int direction = 0;
+	direction = direction | (gear_rf>=0?rf_f:rf_b);
+	direction = direction | (gear_rb>=0?rb_f:rb_b);
+80001130:	28630000 	slti	v1,v1,0
+80001134:	00a3100b 	movn	v0,a1,v1
+G:\0\2bluetooth_car\motor/main.c:248
+	direction = direction | (gear_lf>=0?lf_f:lf_b);
+80001138:	28840000 	slti	a0,a0,0
+8000113c:	24050004 	li	a1,4
+80001140:	24030001 	li	v1,1
+80001144:	00a4180a 	movz	v1,a1,a0
+G:\0\2bluetooth_car\motor/main.c:249
+	direction = direction | (gear_lb>=0?lb_f:lb_b);
+80001148:	8f84800c 	lw	a0,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:248
+void _go(void)
+{
+	int direction = 0;
+	direction = direction | (gear_rf>=0?rf_f:rf_b);
+	direction = direction | (gear_rb>=0?rb_f:rb_b);
+	direction = direction | (gear_lf>=0?lf_f:lf_b);
+8000114c:	00621825 	or	v1,v1,v0
+G:\0\2bluetooth_car\motor/main.c:249
+	direction = direction | (gear_lb>=0?lb_f:lb_b);
+80001150:	24050040 	li	a1,64
+80001154:	28840000 	slti	a0,a0,0
+80001158:	24020008 	li	v0,8
+8000115c:	00a4100a 	movz	v0,a1,a0
+80001160:	00621025 	or	v0,v1,v0
+G:\0\2bluetooth_car\motor/main.c:250
+	*WRITE_IO(dir_data) = direction;
+80001164:	3c03b1a0 	lui	v1,0xb1a0
+80001168:	ac620000 	sw	v0,0(v1)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+8000116c:	afa00010 	sw	zero,16(sp)
+80001170:	8fa20010 	lw	v0,16(sp)
+80001174:	2c4203e8 	sltiu	v0,v0,1000
+80001178:	10400008 	beqz	v0,8000119c <_go+0x98>
+8000117c:	8f838010 	lw	v1,-32752(gp)
+80001180:	8fa20010 	lw	v0,16(sp)
+80001184:	24420001 	addiu	v0,v0,1
+80001188:	afa20010 	sw	v0,16(sp)
+8000118c:	8fa20010 	lw	v0,16(sp)
+80001190:	2c4203e8 	sltiu	v0,v0,1000
+80001194:	1440fffa 	bnez	v0,80001180 <_go+0x7c>
+80001198:	8f838010 	lw	v1,-32752(gp)
+gear2speed():
+G:\0\2bluetooth_car\motor/main.c:287
+
+	return (char)RecievedByte;
+}
+
+int gear2speed(int *gear) {
+	if (*gear == 1) {
+8000119c:	24040001 	li	a0,1
+800011a0:	10640014 	beq	v1,a0,800011f4 <_go+0xf0>
+800011a4:	3c020006 	lui	v0,0x6
+G:\0\2bluetooth_car\motor/main.c:290
+		return speed3;
+	}
+	else if (*gear == 2) {
+800011a8:	24040002 	li	a0,2
+800011ac:	10640011 	beq	v1,a0,800011f4 <_go+0xf0>
+800011b0:	3c02000c 	lui	v0,0xc
+G:\0\2bluetooth_car\motor/main.c:293
+		return speed2;
+	}
+	else if (*gear == 3) {
+800011b4:	24040003 	li	a0,3
+800011b8:	10640090 	beq	v1,a0,800013fc <_go+0x2f8>
+800011bc:	2405ffff 	li	a1,-1
+G:\0\2bluetooth_car\motor/main.c:296
+		return speed1;
+	}
+	else if (*gear == -1) {
+800011c0:	1065000c 	beq	v1,a1,800011f4 <_go+0xf0>
+800011c4:	3c020006 	lui	v0,0x6
+G:\0\2bluetooth_car\motor/main.c:299
+		return speed3;
+	}
+	else if (*gear == -2) {
+800011c8:	2405fffe 	li	a1,-2
+800011cc:	10650009 	beq	v1,a1,800011f4 <_go+0xf0>
+800011d0:	3c02000c 	lui	v0,0xc
+G:\0\2bluetooth_car\motor/main.c:302
+		return speed2;
+	}
+	else if (*gear == -3) {
+800011d4:	2402fffd 	li	v0,-3
+800011d8:	10620088 	beq	v1,v0,800013fc <_go+0x2f8>
+800011dc:	28650003 	slti	a1,v1,3
+G:\0\2bluetooth_car\motor/main.c:305
+		return speed1;
+	}
+	else if (*gear >= 3) {
+800011e0:	14a00092 	bnez	a1,8000142c <_go+0x328>
+800011e4:	2863fffe 	slti	v1,v1,-2
+G:\0\2bluetooth_car\motor/main.c:306
+		*gear = 3;
+800011e8:	3c02000f 	lui	v0,0xf
+800011ec:	af848010 	sw	a0,-32752(gp)
+800011f0:	3442ffff 	ori	v0,v0,0xffff
+_go():
+G:\0\2bluetooth_car\motor/main.c:252
+	direction = direction | (gear_rb>=0?rb_f:rb_b);
+	direction = direction | (gear_lf>=0?lf_f:lf_b);
+	direction = direction | (gear_lb>=0?lb_f:lb_b);
+	*WRITE_IO(dir_data) = direction;
+	delay();
+	*WRITE_IO(WHEEL_RF) = gear2speed(&gear_rf);
+800011f4:	3c03b100 	lui	v1,0xb100
+800011f8:	ac620000 	sw	v0,0(v1)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+800011fc:	afa0000c 	sw	zero,12(sp)
+80001200:	8fa2000c 	lw	v0,12(sp)
+80001204:	2c4203e8 	sltiu	v0,v0,1000
+80001208:	10400008 	beqz	v0,8000122c <_go+0x128>
+8000120c:	8f83800c 	lw	v1,-32756(gp)
+80001210:	8fa2000c 	lw	v0,12(sp)
+80001214:	24420001 	addiu	v0,v0,1
+80001218:	afa2000c 	sw	v0,12(sp)
+8000121c:	8fa2000c 	lw	v0,12(sp)
+80001220:	2c4203e8 	sltiu	v0,v0,1000
+80001224:	1440fffa 	bnez	v0,80001210 <_go+0x10c>
+80001228:	8f83800c 	lw	v1,-32756(gp)
+gear2speed():
+G:\0\2bluetooth_car\motor/main.c:287
+
+	return (char)RecievedByte;
+}
+
+int gear2speed(int *gear) {
+	if (*gear == 1) {
+8000122c:	24040001 	li	a0,1
+80001230:	10640014 	beq	v1,a0,80001284 <_go+0x180>
+80001234:	3c020006 	lui	v0,0x6
+G:\0\2bluetooth_car\motor/main.c:290
+		return speed3;
+	}
+	else if (*gear == 2) {
+80001238:	24040002 	li	a0,2
+8000123c:	10640011 	beq	v1,a0,80001284 <_go+0x180>
+80001240:	3c02000c 	lui	v0,0xc
+G:\0\2bluetooth_car\motor/main.c:293
+		return speed2;
+	}
+	else if (*gear == 3) {
+80001244:	24040003 	li	a0,3
+80001248:	1064006f 	beq	v1,a0,80001408 <_go+0x304>
+8000124c:	2405ffff 	li	a1,-1
+G:\0\2bluetooth_car\motor/main.c:296
+		return speed1;
+	}
+	else if (*gear == -1) {
+80001250:	1065000c 	beq	v1,a1,80001284 <_go+0x180>
+80001254:	3c020006 	lui	v0,0x6
+G:\0\2bluetooth_car\motor/main.c:299
+		return speed3;
+	}
+	else if (*gear == -2) {
+80001258:	2405fffe 	li	a1,-2
+8000125c:	10650009 	beq	v1,a1,80001284 <_go+0x180>
+80001260:	3c02000c 	lui	v0,0xc
+G:\0\2bluetooth_car\motor/main.c:302
+		return speed2;
+	}
+	else if (*gear == -3) {
+80001264:	2402fffd 	li	v0,-3
+80001268:	10620067 	beq	v1,v0,80001408 <_go+0x304>
+8000126c:	28650003 	slti	a1,v1,3
+G:\0\2bluetooth_car\motor/main.c:305
+		return speed1;
+	}
+	else if (*gear >= 3) {
+80001270:	14a0007a 	bnez	a1,8000145c <_go+0x358>
+80001274:	2863fffe 	slti	v1,v1,-2
+G:\0\2bluetooth_car\motor/main.c:306
+		*gear = 3;
+80001278:	3c02000f 	lui	v0,0xf
+8000127c:	af84800c 	sw	a0,-32756(gp)
+80001280:	3442ffff 	ori	v0,v0,0xffff
+_go():
+G:\0\2bluetooth_car\motor/main.c:254
+	direction = direction | (gear_lb>=0?lb_f:lb_b);
+	*WRITE_IO(dir_data) = direction;
+	delay();
+	*WRITE_IO(WHEEL_RF) = gear2speed(&gear_rf);
+	delay();
+	*WRITE_IO(WHEEL_LB) = gear2speed(&gear_lb);
+80001284:	3c03b120 	lui	v1,0xb120
+80001288:	ac620000 	sw	v0,0(v1)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+8000128c:	afa00008 	sw	zero,8(sp)
+80001290:	8fa20008 	lw	v0,8(sp)
+80001294:	2c4203e8 	sltiu	v0,v0,1000
+80001298:	10400008 	beqz	v0,800012bc <_go+0x1b8>
+8000129c:	8f838014 	lw	v1,-32748(gp)
+800012a0:	8fa20008 	lw	v0,8(sp)
+800012a4:	24420001 	addiu	v0,v0,1
+800012a8:	afa20008 	sw	v0,8(sp)
+800012ac:	8fa20008 	lw	v0,8(sp)
+800012b0:	2c4203e8 	sltiu	v0,v0,1000
+800012b4:	1440fffa 	bnez	v0,800012a0 <_go+0x19c>
+800012b8:	8f838014 	lw	v1,-32748(gp)
+gear2speed():
+G:\0\2bluetooth_car\motor/main.c:287
+
+	return (char)RecievedByte;
+}
+
+int gear2speed(int *gear) {
+	if (*gear == 1) {
+800012bc:	24040001 	li	a0,1
+800012c0:	10640014 	beq	v1,a0,80001314 <_go+0x210>
+800012c4:	3c020006 	lui	v0,0x6
+G:\0\2bluetooth_car\motor/main.c:290
+		return speed3;
+	}
+	else if (*gear == 2) {
+800012c8:	24040002 	li	a0,2
+800012cc:	10640011 	beq	v1,a0,80001314 <_go+0x210>
+800012d0:	3c02000c 	lui	v0,0xc
+G:\0\2bluetooth_car\motor/main.c:293
+		return speed2;
+	}
+	else if (*gear == 3) {
+800012d4:	24040003 	li	a0,3
+800012d8:	10640042 	beq	v1,a0,800013e4 <_go+0x2e0>
+800012dc:	2405ffff 	li	a1,-1
+G:\0\2bluetooth_car\motor/main.c:296
+		return speed1;
+	}
+	else if (*gear == -1) {
+800012e0:	1065000c 	beq	v1,a1,80001314 <_go+0x210>
+800012e4:	3c020006 	lui	v0,0x6
+G:\0\2bluetooth_car\motor/main.c:299
+		return speed3;
+	}
+	else if (*gear == -2) {
+800012e8:	2405fffe 	li	a1,-2
+800012ec:	10650009 	beq	v1,a1,80001314 <_go+0x210>
+800012f0:	3c02000c 	lui	v0,0xc
+G:\0\2bluetooth_car\motor/main.c:302
+		return speed2;
+	}
+	else if (*gear == -3) {
+800012f4:	2402fffd 	li	v0,-3
+800012f8:	1062003a 	beq	v1,v0,800013e4 <_go+0x2e0>
+800012fc:	28650003 	slti	a1,v1,3
+G:\0\2bluetooth_car\motor/main.c:305
+		return speed1;
+	}
+	else if (*gear >= 3) {
+80001300:	14a00050 	bnez	a1,80001444 <_go+0x340>
+80001304:	2863fffe 	slti	v1,v1,-2
+G:\0\2bluetooth_car\motor/main.c:306
+		*gear = 3;
+80001308:	3c02000f 	lui	v0,0xf
+8000130c:	af848014 	sw	a0,-32748(gp)
+80001310:	3442ffff 	ori	v0,v0,0xffff
+_go():
+G:\0\2bluetooth_car\motor/main.c:256
+	delay();
+	*WRITE_IO(WHEEL_RF) = gear2speed(&gear_rf);
+	delay();
+	*WRITE_IO(WHEEL_LB) = gear2speed(&gear_lb);
+	delay();
+	*WRITE_IO(WHEEL_LF) = gear2speed(&gear_lf);
+80001314:	3c03b140 	lui	v1,0xb140
+80001318:	ac620000 	sw	v0,0(v1)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+8000131c:	afa00004 	sw	zero,4(sp)
+80001320:	8fa20004 	lw	v0,4(sp)
+80001324:	2c4203e8 	sltiu	v0,v0,1000
+80001328:	10400008 	beqz	v0,8000134c <_go+0x248>
+8000132c:	8f838008 	lw	v1,-32760(gp)
+80001330:	8fa20004 	lw	v0,4(sp)
+80001334:	24420001 	addiu	v0,v0,1
+80001338:	afa20004 	sw	v0,4(sp)
+8000133c:	8fa20004 	lw	v0,4(sp)
+80001340:	2c4203e8 	sltiu	v0,v0,1000
+80001344:	1440fffa 	bnez	v0,80001330 <_go+0x22c>
+80001348:	8f838008 	lw	v1,-32760(gp)
+gear2speed():
+G:\0\2bluetooth_car\motor/main.c:287
+
+	return (char)RecievedByte;
+}
+
+int gear2speed(int *gear) {
+	if (*gear == 1) {
+8000134c:	24040001 	li	a0,1
+80001350:	10640014 	beq	v1,a0,800013a4 <_go+0x2a0>
+80001354:	3c020006 	lui	v0,0x6
+G:\0\2bluetooth_car\motor/main.c:290
+		return speed3;
+	}
+	else if (*gear == 2) {
+80001358:	24040002 	li	a0,2
+8000135c:	10640011 	beq	v1,a0,800013a4 <_go+0x2a0>
+80001360:	3c02000c 	lui	v0,0xc
+G:\0\2bluetooth_car\motor/main.c:293
+		return speed2;
+	}
+	else if (*gear == 3) {
+80001364:	24040003 	li	a0,3
+80001368:	10640021 	beq	v1,a0,800013f0 <_go+0x2ec>
+8000136c:	2405ffff 	li	a1,-1
+G:\0\2bluetooth_car\motor/main.c:296
+		return speed1;
+	}
+	else if (*gear == -1) {
+80001370:	1065000c 	beq	v1,a1,800013a4 <_go+0x2a0>
+80001374:	3c020006 	lui	v0,0x6
+G:\0\2bluetooth_car\motor/main.c:299
+		return speed3;
+	}
+	else if (*gear == -2) {
+80001378:	2405fffe 	li	a1,-2
+8000137c:	10650009 	beq	v1,a1,800013a4 <_go+0x2a0>
+80001380:	3c02000c 	lui	v0,0xc
+G:\0\2bluetooth_car\motor/main.c:302
+		return speed2;
+	}
+	else if (*gear == -3) {
+80001384:	2402fffd 	li	v0,-3
+80001388:	10620019 	beq	v1,v0,800013f0 <_go+0x2ec>
+8000138c:	28650003 	slti	a1,v1,3
+G:\0\2bluetooth_car\motor/main.c:305
+		return speed1;
+	}
+	else if (*gear >= 3) {
+80001390:	14a00020 	bnez	a1,80001414 <_go+0x310>
+80001394:	2863fffe 	slti	v1,v1,-2
+G:\0\2bluetooth_car\motor/main.c:306
+		*gear = 3;
+80001398:	3c02000f 	lui	v0,0xf
+8000139c:	af848008 	sw	a0,-32760(gp)
+800013a0:	3442ffff 	ori	v0,v0,0xffff
+_go():
+G:\0\2bluetooth_car\motor/main.c:258
+	delay();
+	*WRITE_IO(WHEEL_LB) = gear2speed(&gear_lb);
+	delay();
+	*WRITE_IO(WHEEL_LF) = gear2speed(&gear_lf);
+	delay();
+	*WRITE_IO(WHEEL_RB) = gear2speed(&gear_rb);
+800013a4:	3c03b180 	lui	v1,0xb180
+800013a8:	ac620000 	sw	v0,0(v1)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+800013ac:	afa00000 	sw	zero,0(sp)
+800013b0:	8fa20000 	lw	v0,0(sp)
+800013b4:	2c4203e8 	sltiu	v0,v0,1000
+800013b8:	10400008 	beqz	v0,800013dc <_go+0x2d8>
+800013bc:	00000000 	nop
+800013c0:	8fa20000 	lw	v0,0(sp)
+800013c4:	24420001 	addiu	v0,v0,1
+800013c8:	afa20000 	sw	v0,0(sp)
+800013cc:	8fa20000 	lw	v0,0(sp)
+800013d0:	2c4203e8 	sltiu	v0,v0,1000
+800013d4:	1440fffa 	bnez	v0,800013c0 <_go+0x2bc>
+800013d8:	00000000 	nop
+_go():
+G:\0\2bluetooth_car\motor/main.c:260
+	delay();
+	*WRITE_IO(WHEEL_LF) = gear2speed(&gear_lf);
+	delay();
+	*WRITE_IO(WHEEL_RB) = gear2speed(&gear_rb);
+	delay();
+}
+800013dc:	03e00008 	jr	ra
+800013e0:	27bd0018 	addiu	sp,sp,24
+gear2speed():
+G:\0\2bluetooth_car\motor/main.c:302
+		return speed3;
+	}
+	else if (*gear == -2) {
+		return speed2;
+	}
+	else if (*gear == -3) {
+800013e4:	3c02000f 	lui	v0,0xf
+_go():
+800013e8:	1000ffca 	b	80001314 <_go+0x210>
+800013ec:	3442ffff 	ori	v0,v0,0xffff
+gear2speed():
+800013f0:	3c02000f 	lui	v0,0xf
+_go():
+800013f4:	1000ffeb 	b	800013a4 <_go+0x2a0>
+800013f8:	3442ffff 	ori	v0,v0,0xffff
+gear2speed():
+800013fc:	3c02000f 	lui	v0,0xf
+_go():
+80001400:	1000ff7c 	b	800011f4 <_go+0xf0>
+80001404:	3442ffff 	ori	v0,v0,0xffff
+gear2speed():
+80001408:	3c02000f 	lui	v0,0xf
+_go():
+8000140c:	1000ff9d 	b	80001284 <_go+0x180>
+80001410:	3442ffff 	ori	v0,v0,0xffff
+gear2speed():
+G:\0\2bluetooth_car\motor/main.c:309
+	}
+	else if (*gear >= 3) {
+		*gear = 3;
+		return speed1;
+	}
+	else if (*gear <= -3) {
+80001414:	5060ffe3 	beqzl	v1,800013a4 <_go+0x2a0>
+80001418:	00001021 	move	v0,zero
+G:\0\2bluetooth_car\motor/main.c:310
+		*gear = -3;
+8000141c:	af828008 	sw	v0,-32760(gp)
+80001420:	3c02000f 	lui	v0,0xf
+_go():
+80001424:	1000ffdf 	b	800013a4 <_go+0x2a0>
+80001428:	3442ffff 	ori	v0,v0,0xffff
+gear2speed():
+G:\0\2bluetooth_car\motor/main.c:309
+	}
+	else if (*gear >= 3) {
+		*gear = 3;
+		return speed1;
+	}
+	else if (*gear <= -3) {
+8000142c:	5060ff71 	beqzl	v1,800011f4 <_go+0xf0>
+80001430:	00001021 	move	v0,zero
+G:\0\2bluetooth_car\motor/main.c:310
+		*gear = -3;
+80001434:	af828010 	sw	v0,-32752(gp)
+80001438:	3c02000f 	lui	v0,0xf
+_go():
+8000143c:	1000ff6d 	b	800011f4 <_go+0xf0>
+80001440:	3442ffff 	ori	v0,v0,0xffff
+gear2speed():
+G:\0\2bluetooth_car\motor/main.c:309
+	}
+	else if (*gear >= 3) {
+		*gear = 3;
+		return speed1;
+	}
+	else if (*gear <= -3) {
+80001444:	5060ffb3 	beqzl	v1,80001314 <_go+0x210>
+80001448:	00001021 	move	v0,zero
+G:\0\2bluetooth_car\motor/main.c:310
+		*gear = -3;
+8000144c:	af828014 	sw	v0,-32748(gp)
+80001450:	3c02000f 	lui	v0,0xf
+_go():
+80001454:	1000ffaf 	b	80001314 <_go+0x210>
+80001458:	3442ffff 	ori	v0,v0,0xffff
+gear2speed():
+G:\0\2bluetooth_car\motor/main.c:309
+	}
+	else if (*gear >= 3) {
+		*gear = 3;
+		return speed1;
+	}
+	else if (*gear <= -3) {
+8000145c:	5060ff89 	beqzl	v1,80001284 <_go+0x180>
+80001460:	00001021 	move	v0,zero
+G:\0\2bluetooth_car\motor/main.c:310
+		*gear = -3;
+80001464:	af82800c 	sw	v0,-32756(gp)
+80001468:	3c02000f 	lui	v0,0xf
+_go():
+8000146c:	1000ff85 	b	80001284 <_go+0x180>
+80001470:	3442ffff 	ori	v0,v0,0xffff
+G:\0\2bluetooth_car\motor/main.c:309
+	}
+	else if (*gear >= 3) {
+		*gear = 3;
+		return speed1;
+	}
+	else if (*gear <= -3) {
+80001474:	1000ff83 	b	80001284 <_go+0x180>
+80001478:	00001021 	move	v0,zero
+8000147c:	1000ffa5 	b	80001314 <_go+0x210>
+80001480:	00001021 	move	v0,zero
+
+80001484 <init_bluetooth>:
+init_bluetooth():
+G:\0\2bluetooth_car\motor/main.c:263
+	*WRITE_IO(WHEEL_RB) = gear2speed(&gear_rb);
+	delay();
+}
+
+// The following is for bluetooth
+void init_bluetooth(void) {
+80001484:	27bdffe8 	addiu	sp,sp,-24
+G:\0\2bluetooth_car\motor/main.c:264
+	*WRITE_IO(BT_UART_BASE + lcr) = 0x00000080; // LCR[7]  is 1
+80001488:	3c02b0a0 	lui	v0,0xb0a0
+8000148c:	24030080 	li	v1,128
+80001490:	ac43100c 	sw	v1,4108(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001494:	afa00010 	sw	zero,16(sp)
+80001498:	8fa20010 	lw	v0,16(sp)
+8000149c:	2c4203e8 	sltiu	v0,v0,1000
+800014a0:	10400008 	beqz	v0,800014c4 <init_bluetooth+0x40>
+800014a4:	3c02b0a0 	lui	v0,0xb0a0
+800014a8:	8fa20010 	lw	v0,16(sp)
+800014ac:	24420001 	addiu	v0,v0,1
+800014b0:	afa20010 	sw	v0,16(sp)
+800014b4:	8fa20010 	lw	v0,16(sp)
+800014b8:	2c4203e8 	sltiu	v0,v0,1000
+800014bc:	1440fffa 	bnez	v0,800014a8 <init_bluetooth+0x24>
+800014c0:	3c02b0a0 	lui	v0,0xb0a0
+init_bluetooth():
+G:\0\2bluetooth_car\motor/main.c:266
+
+// The following is for bluetooth
+void init_bluetooth(void) {
+	*WRITE_IO(BT_UART_BASE + lcr) = 0x00000080; // LCR[7]  is 1
+	delay();
+	*WRITE_IO(BT_UART_BASE + dll) = 69; // DLL msb. 115200 at 50MHz. Formula is Clk/16/baudrate. From axi_uart manual.
+800014c4:	24030045 	li	v1,69
+800014c8:	ac431000 	sw	v1,4096(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+800014cc:	afa0000c 	sw	zero,12(sp)
+800014d0:	8fa2000c 	lw	v0,12(sp)
+800014d4:	2c4203e8 	sltiu	v0,v0,1000
+800014d8:	10400008 	beqz	v0,800014fc <init_bluetooth+0x78>
+800014dc:	3c02b0a0 	lui	v0,0xb0a0
+800014e0:	8fa2000c 	lw	v0,12(sp)
+800014e4:	24420001 	addiu	v0,v0,1
+800014e8:	afa2000c 	sw	v0,12(sp)
+800014ec:	8fa2000c 	lw	v0,12(sp)
+800014f0:	2c4203e8 	sltiu	v0,v0,1000
+800014f4:	1440fffa 	bnez	v0,800014e0 <init_bluetooth+0x5c>
+800014f8:	3c02b0a0 	lui	v0,0xb0a0
+init_bluetooth():
+G:\0\2bluetooth_car\motor/main.c:268
+void init_bluetooth(void) {
+	*WRITE_IO(BT_UART_BASE + lcr) = 0x00000080; // LCR[7]  is 1
+	delay();
+	*WRITE_IO(BT_UART_BASE + dll) = 69; // DLL msb. 115200 at 50MHz. Formula is Clk/16/baudrate. From axi_uart manual.
+	delay();
+	*WRITE_IO(BT_UART_BASE + dlm) = 0x00000001; // DLL lsb.
+800014fc:	24030001 	li	v1,1
+80001500:	ac431004 	sw	v1,4100(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001504:	afa00008 	sw	zero,8(sp)
+80001508:	8fa20008 	lw	v0,8(sp)
+8000150c:	2c4203e8 	sltiu	v0,v0,1000
+80001510:	10400008 	beqz	v0,80001534 <init_bluetooth+0xb0>
+80001514:	3c02b0a0 	lui	v0,0xb0a0
+80001518:	8fa20008 	lw	v0,8(sp)
+8000151c:	24420001 	addiu	v0,v0,1
+80001520:	afa20008 	sw	v0,8(sp)
+80001524:	8fa20008 	lw	v0,8(sp)
+80001528:	2c4203e8 	sltiu	v0,v0,1000
+8000152c:	1440fffa 	bnez	v0,80001518 <init_bluetooth+0x94>
+80001530:	3c02b0a0 	lui	v0,0xb0a0
+init_bluetooth():
+G:\0\2bluetooth_car\motor/main.c:270
+	delay();
+	*WRITE_IO(BT_UART_BASE + dll) = 69; // DLL msb. 115200 at 50MHz. Formula is Clk/16/baudrate. From axi_uart manual.
+	delay();
+	*WRITE_IO(BT_UART_BASE + dlm) = 0x00000001; // DLL lsb.
+	delay();
+	*WRITE_IO(BT_UART_BASE + lcr) = 0x00000003; // LCR register. 8n1 parity disabled
+80001534:	24030003 	li	v1,3
+80001538:	ac43100c 	sw	v1,4108(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+8000153c:	afa00004 	sw	zero,4(sp)
+80001540:	8fa20004 	lw	v0,4(sp)
+80001544:	2c4203e8 	sltiu	v0,v0,1000
+80001548:	10400008 	beqz	v0,8000156c <init_bluetooth+0xe8>
+8000154c:	3c02b0a0 	lui	v0,0xb0a0
+80001550:	8fa20004 	lw	v0,4(sp)
+80001554:	24420001 	addiu	v0,v0,1
+80001558:	afa20004 	sw	v0,4(sp)
+8000155c:	8fa20004 	lw	v0,4(sp)
+80001560:	2c4203e8 	sltiu	v0,v0,1000
+80001564:	1440fffa 	bnez	v0,80001550 <init_bluetooth+0xcc>
+80001568:	3c02b0a0 	lui	v0,0xb0a0
+init_bluetooth():
+G:\0\2bluetooth_car\motor/main.c:272
+	delay();
+	*WRITE_IO(BT_UART_BASE + dlm) = 0x00000001; // DLL lsb.
+	delay();
+	*WRITE_IO(BT_UART_BASE + lcr) = 0x00000003; // LCR register. 8n1 parity disabled
+	delay();
+	*WRITE_IO(BT_UART_BASE + ier) = 0x00000001; // IER register. disable interrupts
+8000156c:	24030001 	li	v1,1
+80001570:	ac431004 	sw	v1,4100(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001574:	afa00000 	sw	zero,0(sp)
+80001578:	8fa20000 	lw	v0,0(sp)
+8000157c:	2c4203e8 	sltiu	v0,v0,1000
+80001580:	10400008 	beqz	v0,800015a4 <init_bluetooth+0x120>
+80001584:	00000000 	nop
+80001588:	8fa20000 	lw	v0,0(sp)
+8000158c:	24420001 	addiu	v0,v0,1
+80001590:	afa20000 	sw	v0,0(sp)
+80001594:	8fa20000 	lw	v0,0(sp)
+80001598:	2c4203e8 	sltiu	v0,v0,1000
+8000159c:	1440fffa 	bnez	v0,80001588 <init_bluetooth+0x104>
+800015a0:	00000000 	nop
+init_bluetooth():
+G:\0\2bluetooth_car\motor/main.c:274
+	delay();
+	*WRITE_IO(BT_UART_BASE + lcr) = 0x00000003; // LCR register. 8n1 parity disabled
+	delay();
+	*WRITE_IO(BT_UART_BASE + ier) = 0x00000001; // IER register. disable interrupts
+	delay();
+}
+800015a4:	03e00008 	jr	ra
+800015a8:	27bd0018 	addiu	sp,sp,24
+
+800015ac <BT_uart_inbyte>:
+BT_uart_inbyte():
+G:\0\2bluetooth_car\motor/main.c:279
+
+char BT_uart_inbyte(void) {
+	unsigned int RecievedByte;
+
+	while(!((*READ_IO(BT_UART_BASE + lsr) & 0x00000001)==0x00000001));
+800015ac:	3c03b0a0 	lui	v1,0xb0a0
+G:\0\2bluetooth_car\motor/main.c:279 (discriminator 1)
+800015b0:	8c621014 	lw	v0,4116(v1)
+800015b4:	30420001 	andi	v0,v0,0x1
+800015b8:	1040fffd 	beqz	v0,800015b0 <BT_uart_inbyte+0x4>
+800015bc:	3c02b0a0 	lui	v0,0xb0a0
+G:\0\2bluetooth_car\motor/main.c:281
+
+	RecievedByte = *READ_IO(BT_UART_BASE + rbr);
+800015c0:	8c421000 	lw	v0,4096(v0)
+G:\0\2bluetooth_car\motor/main.c:284
+
+	return (char)RecievedByte;
+}
+800015c4:	03e00008 	jr	ra
+800015c8:	304200ff 	andi	v0,v0,0xff
+
+800015cc <gear2speed>:
+gear2speed():
+G:\0\2bluetooth_car\motor/main.c:287
+
+int gear2speed(int *gear) {
+	if (*gear == 1) {
+800015cc:	8c830000 	lw	v1,0(a0)
+800015d0:	24050001 	li	a1,1
+800015d4:	10650015 	beq	v1,a1,8000162c <gear2speed+0x60>
+800015d8:	3c020006 	lui	v0,0x6
+G:\0\2bluetooth_car\motor/main.c:290
+		return speed3;
+	}
+	else if (*gear == 2) {
+800015dc:	24050002 	li	a1,2
+800015e0:	10650012 	beq	v1,a1,8000162c <gear2speed+0x60>
+800015e4:	3c02000c 	lui	v0,0xc
+G:\0\2bluetooth_car\motor/main.c:293
+		return speed2;
+	}
+	else if (*gear == 3) {
+800015e8:	24050003 	li	a1,3
+800015ec:	10650011 	beq	v1,a1,80001634 <gear2speed+0x68>
+800015f0:	2406ffff 	li	a2,-1
+G:\0\2bluetooth_car\motor/main.c:296
+		return speed1;
+	}
+	else if (*gear == -1) {
+800015f4:	1066000d 	beq	v1,a2,8000162c <gear2speed+0x60>
+800015f8:	3c020006 	lui	v0,0x6
+G:\0\2bluetooth_car\motor/main.c:299
+		return speed3;
+	}
+	else if (*gear == -2) {
+800015fc:	2406fffe 	li	a2,-2
+80001600:	1066000a 	beq	v1,a2,8000162c <gear2speed+0x60>
+80001604:	3c02000c 	lui	v0,0xc
+G:\0\2bluetooth_car\motor/main.c:302
+		return speed2;
+	}
+	else if (*gear == -3) {
+80001608:	2402fffd 	li	v0,-3
+8000160c:	10620009 	beq	v1,v0,80001634 <gear2speed+0x68>
+80001610:	28660003 	slti	a2,v1,3
+G:\0\2bluetooth_car\motor/main.c:305
+		return speed1;
+	}
+	else if (*gear >= 3) {
+80001614:	54c0000a 	bnezl	a2,80001640 <gear2speed+0x74>
+80001618:	2863fffe 	slti	v1,v1,-2
+G:\0\2bluetooth_car\motor/main.c:307
+		*gear = 3;
+		return speed1;
+8000161c:	3c02000f 	lui	v0,0xf
+G:\0\2bluetooth_car\motor/main.c:306
+	}
+	else if (*gear == -3) {
+		return speed1;
+	}
+	else if (*gear >= 3) {
+		*gear = 3;
+80001620:	ac850000 	sw	a1,0(a0)
+G:\0\2bluetooth_car\motor/main.c:307
+		return speed1;
+80001624:	03e00008 	jr	ra
+80001628:	3442ffff 	ori	v0,v0,0xffff
+G:\0\2bluetooth_car\motor/main.c:316
+		return speed1;
+	}
+	else {
+		return 0;
+	}
+}
+8000162c:	03e00008 	jr	ra
+80001630:	00000000 	nop
+G:\0\2bluetooth_car\motor/main.c:294
+	}
+	else if (*gear == 2) {
+		return speed2;
+	}
+	else if (*gear == 3) {
+		return speed1;
+80001634:	3c02000f 	lui	v0,0xf
+80001638:	03e00008 	jr	ra
+8000163c:	3442ffff 	ori	v0,v0,0xffff
+G:\0\2bluetooth_car\motor/main.c:309
+	}
+	else if (*gear >= 3) {
+		*gear = 3;
+		return speed1;
+	}
+	else if (*gear <= -3) {
+80001640:	5060fffa 	beqzl	v1,8000162c <gear2speed+0x60>
+80001644:	00001021 	move	v0,zero
+G:\0\2bluetooth_car\motor/main.c:310
+		*gear = -3;
+80001648:	ac820000 	sw	v0,0(a0)
+G:\0\2bluetooth_car\motor/main.c:311
+		return speed1;
+8000164c:	3c02000f 	lui	v0,0xf
+80001650:	03e00008 	jr	ra
+80001654:	3442ffff 	ori	v0,v0,0xffff
+
+80001658 <speedup>:
+speedup():
+G:\0\2bluetooth_car\motor/main.c:320
+	}
+}
+
+void speedup(void) {
+	//小车当前状态不是直行
+	if (state != 0) {
+80001658:	8f828004 	lw	v0,-32764(gp)
+8000165c:	1440000d 	bnez	v0,80001694 <speedup+0x3c>
+80001660:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:325
+		state = 0;
+		set_gear(2, 2, 2, 2);
+	}
+	else {
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+80001664:	8f828010 	lw	v0,-32752(gp)
+80001668:	8f838008 	lw	v1,-32760(gp)
+8000166c:	8f85800c 	lw	a1,-32756(gp)
+80001670:	24840001 	addiu	a0,a0,1
+80001674:	24420001 	addiu	v0,v0,1
+80001678:	24630001 	addiu	v1,v1,1
+8000167c:	24a50001 	addiu	a1,a1,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001680:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001684:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001688:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+8000168c:	08000441 	j	80001104 <_go>
+80001690:	af828010 	sw	v0,-32752(gp)
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001694:	24020002 	li	v0,2
+speedup():
+G:\0\2bluetooth_car\motor/main.c:321
+}
+
+void speedup(void) {
+	//小车当前状态不是直行
+	if (state != 0) {
+		state = 0;
+80001698:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+8000169c:	af82800c 	sw	v0,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+800016a0:	af828014 	sw	v0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+800016a4:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+800016a8:	08000441 	j	80001104 <_go>
+800016ac:	af828010 	sw	v0,-32752(gp)
+
+800016b0 <slowdown>:
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+800016b0:	8f828004 	lw	v0,-32764(gp)
+800016b4:	1440000d 	bnez	v0,800016ec <slowdown+0x3c>
+800016b8:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:335
+		state = 0;
+		set_gear(0, 0, 0, 0);
+	}
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+800016bc:	8f828010 	lw	v0,-32752(gp)
+800016c0:	8f838008 	lw	v1,-32760(gp)
+800016c4:	8f85800c 	lw	a1,-32756(gp)
+800016c8:	2484ffff 	addiu	a0,a0,-1
+800016cc:	2442ffff 	addiu	v0,v0,-1
+800016d0:	2463ffff 	addiu	v1,v1,-1
+800016d4:	24a5ffff 	addiu	a1,a1,-1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+800016d8:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+800016dc:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+800016e0:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+800016e4:	08000441 	j	80001104 <_go>
+800016e8:	af828010 	sw	v0,-32752(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:331
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+		state = 0;
+800016ec:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+800016f0:	af80800c 	sw	zero,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+800016f4:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+800016f8:	af808008 	sw	zero,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+800016fc:	08000441 	j	80001104 <_go>
+80001700:	af808010 	sw	zero,-32752(gp)
+
+80001704 <leftforward>:
+leftforward():
+G:\0\2bluetooth_car\motor/main.c:339
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+	}
+}
+void leftforward(void) {
+	state = 1;
+80001704:	24030001 	li	v1,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:366
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+	gear_lf = lf;
+	gear_rb = rb;
+80001708:	24020003 	li	v0,3
+leftforward():
+G:\0\2bluetooth_car\motor/main.c:339
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+	}
+}
+void leftforward(void) {
+	state = 1;
+8000170c:	af838004 	sw	v1,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001710:	af83800c 	sw	v1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001714:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001718:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+8000171c:	08000441 	j	80001104 <_go>
+80001720:	af828010 	sw	v0,-32752(gp)
+
+80001724 <rightforward>:
+rightforward():
+G:\0\2bluetooth_car\motor/main.c:344
+	state = 1;
+	set_gear(0, 1, 3, 3);
+}
+
+void rightforward(void) {
+	state = 1;
+80001724:	24020001 	li	v0,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001728:	24030003 	li	v1,3
+rightforward():
+G:\0\2bluetooth_car\motor/main.c:344
+	state = 1;
+	set_gear(0, 1, 3, 3);
+}
+
+void rightforward(void) {
+	state = 1;
+8000172c:	af828004 	sw	v0,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001730:	af83800c 	sw	v1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001734:	af838014 	sw	v1,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001738:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+8000173c:	08000441 	j	80001104 <_go>
+80001740:	af808010 	sw	zero,-32752(gp)
+
+80001744 <turnright>:
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001744:	24030002 	li	v1,2
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_lf = lf;
+	gear_rb = rb;
+80001748:	2402fffe 	li	v0,-2
+turnright():
+G:\0\2bluetooth_car\motor/main.c:349
+	state = 1;
+	set_gear(3, 3, 0, 1);
+}
+
+void turnright(void) {
+	state = 1;
+8000174c:	24040001 	li	a0,1
+80001750:	af848004 	sw	a0,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001754:	af83800c 	sw	v1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001758:	af838014 	sw	v1,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+8000175c:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001760:	08000441 	j	80001104 <_go>
+80001764:	af828010 	sw	v0,-32752(gp)
+
+80001768 <turnleft>:
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001768:	2403fffe 	li	v1,-2
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_lf = lf;
+	gear_rb = rb;
+8000176c:	24020002 	li	v0,2
+turnleft():
+G:\0\2bluetooth_car\motor/main.c:354
+	state = 1;
+	set_gear(2, 2, -2, -2);
+}
+
+void turnleft(void) {
+	state = 1;
+80001770:	24040001 	li	a0,1
+80001774:	af848004 	sw	a0,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001778:	af83800c 	sw	v1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+8000177c:	af838014 	sw	v1,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001780:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001784:	08000441 	j	80001104 <_go>
+80001788:	af828010 	sw	v0,-32752(gp)
+
+8000178c <mystop>:
+mystop():
+G:\0\2bluetooth_car\motor/main.c:359
+	state = 1;
+	set_gear(-2, -2, 2, 2);
+}
+
+void mystop(void) {
+	state = 0;
+8000178c:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001790:	af80800c 	sw	zero,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001794:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001798:	af808008 	sw	zero,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+8000179c:	08000441 	j	80001104 <_go>
+800017a0:	af808010 	sw	zero,-32752(gp)
+
+800017a4 <set_gear>:
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+800017a4:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+800017a8:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+800017ac:	af878008 	sw	a3,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+800017b0:	08000441 	j	80001104 <_go>
+800017b4:	af868010 	sw	a2,-32752(gp)
+
+800017b8 <roundClockwise>:
+roundClockwise():
+G:\0\2bluetooth_car\motor/main.c:373
+}
+
+void roundClockwise()
+{
+	round = init_round;
+800017b8:	240201b0 	li	v0,432
+800017bc:	03e00008 	jr	ra
+800017c0:	af828000 	sw	v0,-32768(gp)
+
+800017c4 <happy>:
+speedup():
+G:\0\2bluetooth_car\motor/main.c:320
+	}
+}
+
+void speedup(void) {
+	//小车当前状态不是直行
+	if (state != 0) {
+800017c4:	8f828004 	lw	v0,-32764(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:377
+{
+	round = init_round;
+}
+
+void happy()
+{
+800017c8:	27bdffd0 	addiu	sp,sp,-48
+speedup():
+G:\0\2bluetooth_car\motor/main.c:320
+	}
+}
+
+void speedup(void) {
+	//小车当前状态不是直行
+	if (state != 0) {
+800017cc:	14400138 	bnez	v0,80001cb0 <happy+0x4ec>
+800017d0:	afbf002c 	sw	ra,44(sp)
+G:\0\2bluetooth_car\motor/main.c:325
+		state = 0;
+		set_gear(2, 2, 2, 2);
+	}
+	else {
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+800017d4:	8f848014 	lw	a0,-32748(gp)
+800017d8:	8f828010 	lw	v0,-32752(gp)
+800017dc:	8f838008 	lw	v1,-32760(gp)
+800017e0:	8f85800c 	lw	a1,-32756(gp)
+800017e4:	24840001 	addiu	a0,a0,1
+800017e8:	24420001 	addiu	v0,v0,1
+800017ec:	24630001 	addiu	v1,v1,1
+800017f0:	24a50001 	addiu	a1,a1,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+800017f4:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+800017f8:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+800017fc:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001800:	0c000441 	jal	80001104 <_go>
+80001804:	af828010 	sw	v0,-32752(gp)
+speedup():
+G:\0\2bluetooth_car\motor/main.c:320
+	}
+}
+
+void speedup(void) {
+	//小车当前状态不是直行
+	if (state != 0) {
+80001808:	8f828004 	lw	v0,-32764(gp)
+8000180c:	1440011f 	bnez	v0,80001c8c <happy+0x4c8>
+80001810:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:325
+		state = 0;
+		set_gear(2, 2, 2, 2);
+	}
+	else {
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+80001814:	8f828010 	lw	v0,-32752(gp)
+80001818:	8f838008 	lw	v1,-32760(gp)
+8000181c:	8f85800c 	lw	a1,-32756(gp)
+80001820:	24840001 	addiu	a0,a0,1
+80001824:	24420001 	addiu	v0,v0,1
+80001828:	24630001 	addiu	v1,v1,1
+8000182c:	24a50001 	addiu	a1,a1,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001830:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001834:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001838:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+8000183c:	0c000441 	jal	80001104 <_go>
+80001840:	af828010 	sw	v0,-32752(gp)
+speedup():
+G:\0\2bluetooth_car\motor/main.c:320
+	}
+}
+
+void speedup(void) {
+	//小车当前状态不是直行
+	if (state != 0) {
+80001844:	8f828004 	lw	v0,-32764(gp)
+80001848:	14400107 	bnez	v0,80001c68 <happy+0x4a4>
+8000184c:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:325
+		state = 0;
+		set_gear(2, 2, 2, 2);
+	}
+	else {
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+80001850:	8f828010 	lw	v0,-32752(gp)
+80001854:	8f838008 	lw	v1,-32760(gp)
+80001858:	8f85800c 	lw	a1,-32756(gp)
+8000185c:	24840001 	addiu	a0,a0,1
+80001860:	24420001 	addiu	v0,v0,1
+80001864:	24630001 	addiu	v1,v1,1
+80001868:	24a50001 	addiu	a1,a1,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+8000186c:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001870:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001874:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001878:	0c000441 	jal	80001104 <_go>
+8000187c:	af828010 	sw	v0,-32752(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:377 (discriminator 1)
+{
+	round = init_round;
+}
+
+void happy()
+{
+80001880:	24030064 	li	v1,100
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001884:	afa00020 	sw	zero,32(sp)
+80001888:	8fa20020 	lw	v0,32(sp)
+8000188c:	2c4203e8 	sltiu	v0,v0,1000
+80001890:	50400009 	beqzl	v0,800018b8 <happy+0xf4>
+80001894:	2463ffff 	addiu	v1,v1,-1
+80001898:	8fa20020 	lw	v0,32(sp)
+8000189c:	24420001 	addiu	v0,v0,1
+800018a0:	afa20020 	sw	v0,32(sp)
+800018a4:	8fa20020 	lw	v0,32(sp)
+800018a8:	2c4203e8 	sltiu	v0,v0,1000
+800018ac:	1440fffa 	bnez	v0,80001898 <happy+0xd4>
+800018b0:	00000000 	nop
+800018b4:	2463ffff 	addiu	v1,v1,-1
+happy():
+G:\0\2bluetooth_car\motor/main.c:383
+	int i = 100,k;
+	speedup();
+	speedup();
+	speedup();
+	k = i;
+	while(k--)	delay();
+800018b8:	1460fff2 	bnez	v1,80001884 <happy+0xc0>
+800018bc:	8f828004 	lw	v0,-32764(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+800018c0:	144000e1 	bnez	v0,80001c48 <happy+0x484>
+800018c4:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:335
+		state = 0;
+		set_gear(0, 0, 0, 0);
+	}
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+800018c8:	8f828010 	lw	v0,-32752(gp)
+800018cc:	8f838008 	lw	v1,-32760(gp)
+800018d0:	8f85800c 	lw	a1,-32756(gp)
+800018d4:	2484ffff 	addiu	a0,a0,-1
+800018d8:	2442ffff 	addiu	v0,v0,-1
+800018dc:	2463ffff 	addiu	v1,v1,-1
+800018e0:	24a5ffff 	addiu	a1,a1,-1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+800018e4:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+800018e8:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+800018ec:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+800018f0:	0c000441 	jal	80001104 <_go>
+800018f4:	af828010 	sw	v0,-32752(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+800018f8:	8f828004 	lw	v0,-32764(gp)
+800018fc:	144000ca 	bnez	v0,80001c28 <happy+0x464>
+80001900:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:335
+		state = 0;
+		set_gear(0, 0, 0, 0);
+	}
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+80001904:	8f828010 	lw	v0,-32752(gp)
+80001908:	8f838008 	lw	v1,-32760(gp)
+8000190c:	8f85800c 	lw	a1,-32756(gp)
+80001910:	2484ffff 	addiu	a0,a0,-1
+80001914:	2442ffff 	addiu	v0,v0,-1
+80001918:	2463ffff 	addiu	v1,v1,-1
+8000191c:	24a5ffff 	addiu	a1,a1,-1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001920:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001924:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001928:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+8000192c:	0c000441 	jal	80001104 <_go>
+80001930:	af828010 	sw	v0,-32752(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+80001934:	8f828004 	lw	v0,-32764(gp)
+80001938:	144000b3 	bnez	v0,80001c08 <happy+0x444>
+8000193c:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:335
+		state = 0;
+		set_gear(0, 0, 0, 0);
+	}
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+80001940:	8f828010 	lw	v0,-32752(gp)
+80001944:	8f838008 	lw	v1,-32760(gp)
+80001948:	8f85800c 	lw	a1,-32756(gp)
+8000194c:	2484ffff 	addiu	a0,a0,-1
+80001950:	2442ffff 	addiu	v0,v0,-1
+80001954:	2463ffff 	addiu	v1,v1,-1
+80001958:	24a5ffff 	addiu	a1,a1,-1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+8000195c:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001960:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001964:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001968:	0c000441 	jal	80001104 <_go>
+8000196c:	af828010 	sw	v0,-32752(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+80001970:	8f828004 	lw	v0,-32764(gp)
+80001974:	1440009c 	bnez	v0,80001be8 <happy+0x424>
+80001978:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:335
+		state = 0;
+		set_gear(0, 0, 0, 0);
+	}
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+8000197c:	8f828010 	lw	v0,-32752(gp)
+80001980:	8f838008 	lw	v1,-32760(gp)
+80001984:	8f85800c 	lw	a1,-32756(gp)
+80001988:	2484ffff 	addiu	a0,a0,-1
+8000198c:	2442ffff 	addiu	v0,v0,-1
+80001990:	2463ffff 	addiu	v1,v1,-1
+80001994:	24a5ffff 	addiu	a1,a1,-1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001998:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+8000199c:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+800019a0:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+800019a4:	0c000441 	jal	80001104 <_go>
+800019a8:	af828010 	sw	v0,-32752(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+800019ac:	8f828004 	lw	v0,-32764(gp)
+800019b0:	14400085 	bnez	v0,80001bc8 <happy+0x404>
+800019b4:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:335
+		state = 0;
+		set_gear(0, 0, 0, 0);
+	}
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+800019b8:	8f828010 	lw	v0,-32752(gp)
+800019bc:	8f838008 	lw	v1,-32760(gp)
+800019c0:	8f85800c 	lw	a1,-32756(gp)
+800019c4:	2484ffff 	addiu	a0,a0,-1
+800019c8:	2442ffff 	addiu	v0,v0,-1
+800019cc:	2463ffff 	addiu	v1,v1,-1
+800019d0:	24a5ffff 	addiu	a1,a1,-1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+800019d4:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+800019d8:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+800019dc:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+800019e0:	0c000441 	jal	80001104 <_go>
+800019e4:	af828010 	sw	v0,-32752(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+800019e8:	8f828004 	lw	v0,-32764(gp)
+800019ec:	1440006e 	bnez	v0,80001ba8 <happy+0x3e4>
+800019f0:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:335
+		state = 0;
+		set_gear(0, 0, 0, 0);
+	}
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+800019f4:	8f828010 	lw	v0,-32752(gp)
+800019f8:	8f838008 	lw	v1,-32760(gp)
+800019fc:	8f85800c 	lw	a1,-32756(gp)
+80001a00:	2484ffff 	addiu	a0,a0,-1
+80001a04:	2442ffff 	addiu	v0,v0,-1
+80001a08:	2463ffff 	addiu	v1,v1,-1
+80001a0c:	24a5ffff 	addiu	a1,a1,-1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001a10:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001a14:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001a18:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001a1c:	0c000441 	jal	80001104 <_go>
+80001a20:	af828010 	sw	v0,-32752(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:377 (discriminator 1)
+{
+	round = init_round;
+}
+
+void happy()
+{
+80001a24:	24030064 	li	v1,100
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001a28:	afa0001c 	sw	zero,28(sp)
+80001a2c:	8fa2001c 	lw	v0,28(sp)
+80001a30:	2c4203e8 	sltiu	v0,v0,1000
+80001a34:	50400009 	beqzl	v0,80001a5c <happy+0x298>
+80001a38:	2463ffff 	addiu	v1,v1,-1
+80001a3c:	8fa2001c 	lw	v0,28(sp)
+80001a40:	24420001 	addiu	v0,v0,1
+80001a44:	afa2001c 	sw	v0,28(sp)
+80001a48:	8fa2001c 	lw	v0,28(sp)
+80001a4c:	2c4203e8 	sltiu	v0,v0,1000
+80001a50:	1440fffa 	bnez	v0,80001a3c <happy+0x278>
+80001a54:	00000000 	nop
+80001a58:	2463ffff 	addiu	v1,v1,-1
+happy():
+G:\0\2bluetooth_car\motor/main.c:391
+	slowdown();
+	slowdown();
+	slowdown();
+	slowdown();
+	k = i;
+	while(k--)	delay();
+80001a5c:	1460fff2 	bnez	v1,80001a28 <happy+0x264>
+80001a60:	24020002 	li	v0,2
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001a64:	2403fffe 	li	v1,-2
+turnleft():
+G:\0\2bluetooth_car\motor/main.c:354
+	state = 1;
+	set_gear(2, 2, -2, -2);
+}
+
+void turnleft(void) {
+	state = 1;
+80001a68:	24040001 	li	a0,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001a6c:	af83800c 	sw	v1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001a70:	af838014 	sw	v1,-32748(gp)
+turnleft():
+G:\0\2bluetooth_car\motor/main.c:354
+	state = 1;
+	set_gear(2, 2, -2, -2);
+}
+
+void turnleft(void) {
+	state = 1;
+80001a74:	af848004 	sw	a0,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:366
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+	gear_lf = lf;
+	gear_rb = rb;
+80001a78:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001a7c:	0c000441 	jal	80001104 <_go>
+80001a80:	af828010 	sw	v0,-32752(gp)
+80001a84:	24030032 	li	v1,50
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001a88:	afa00018 	sw	zero,24(sp)
+80001a8c:	8fa20018 	lw	v0,24(sp)
+80001a90:	2c4203e8 	sltiu	v0,v0,1000
+80001a94:	50400009 	beqzl	v0,80001abc <happy+0x2f8>
+80001a98:	2463ffff 	addiu	v1,v1,-1
+80001a9c:	8fa20018 	lw	v0,24(sp)
+80001aa0:	24420001 	addiu	v0,v0,1
+80001aa4:	afa20018 	sw	v0,24(sp)
+80001aa8:	8fa20018 	lw	v0,24(sp)
+80001aac:	2c4203e8 	sltiu	v0,v0,1000
+80001ab0:	1440fffa 	bnez	v0,80001a9c <happy+0x2d8>
+80001ab4:	00000000 	nop
+80001ab8:	2463ffff 	addiu	v1,v1,-1
+happy():
+G:\0\2bluetooth_car\motor/main.c:394
+	slowdown();
+	k = i;
+	while(k--)	delay();
+	turnleft();
+	k = i/2;
+	while(k--)	delay();
+80001abc:	1460fff2 	bnez	v1,80001a88 <happy+0x2c4>
+80001ac0:	2402fffe 	li	v0,-2
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001ac4:	24030002 	li	v1,2
+turnright():
+G:\0\2bluetooth_car\motor/main.c:349
+	state = 1;
+	set_gear(3, 3, 0, 1);
+}
+
+void turnright(void) {
+	state = 1;
+80001ac8:	24040001 	li	a0,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001acc:	af83800c 	sw	v1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001ad0:	af838014 	sw	v1,-32748(gp)
+turnright():
+G:\0\2bluetooth_car\motor/main.c:349
+	state = 1;
+	set_gear(3, 3, 0, 1);
+}
+
+void turnright(void) {
+	state = 1;
+80001ad4:	af848004 	sw	a0,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:366
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+	gear_lf = lf;
+	gear_rb = rb;
+80001ad8:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001adc:	0c000441 	jal	80001104 <_go>
+80001ae0:	af828010 	sw	v0,-32752(gp)
+80001ae4:	24030064 	li	v1,100
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001ae8:	afa00014 	sw	zero,20(sp)
+80001aec:	8fa20014 	lw	v0,20(sp)
+80001af0:	2c4203e8 	sltiu	v0,v0,1000
+80001af4:	50400009 	beqzl	v0,80001b1c <happy+0x358>
+80001af8:	2463ffff 	addiu	v1,v1,-1
+80001afc:	8fa20014 	lw	v0,20(sp)
+80001b00:	24420001 	addiu	v0,v0,1
+80001b04:	afa20014 	sw	v0,20(sp)
+80001b08:	8fa20014 	lw	v0,20(sp)
+80001b0c:	2c4203e8 	sltiu	v0,v0,1000
+80001b10:	1440fffa 	bnez	v0,80001afc <happy+0x338>
+80001b14:	00000000 	nop
+80001b18:	2463ffff 	addiu	v1,v1,-1
+happy():
+G:\0\2bluetooth_car\motor/main.c:397
+	turnleft();
+	k = i/2;
+	while(k--)	delay();
+	turnright();
+	k = i;
+	while(k--)	delay();
+80001b1c:	1460fff2 	bnez	v1,80001ae8 <happy+0x324>
+80001b20:	24020002 	li	v0,2
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001b24:	2403fffe 	li	v1,-2
+turnleft():
+G:\0\2bluetooth_car\motor/main.c:354
+	state = 1;
+	set_gear(2, 2, -2, -2);
+}
+
+void turnleft(void) {
+	state = 1;
+80001b28:	24040001 	li	a0,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001b2c:	af83800c 	sw	v1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001b30:	af838014 	sw	v1,-32748(gp)
+turnleft():
+G:\0\2bluetooth_car\motor/main.c:354
+	state = 1;
+	set_gear(2, 2, -2, -2);
+}
+
+void turnleft(void) {
+	state = 1;
+80001b34:	af848004 	sw	a0,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:366
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+	gear_lf = lf;
+	gear_rb = rb;
+80001b38:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001b3c:	0c000441 	jal	80001104 <_go>
+80001b40:	af828010 	sw	v0,-32752(gp)
+80001b44:	24030032 	li	v1,50
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001b48:	afa00010 	sw	zero,16(sp)
+80001b4c:	8fa20010 	lw	v0,16(sp)
+80001b50:	2c4203e8 	sltiu	v0,v0,1000
+80001b54:	50400009 	beqzl	v0,80001b7c <happy+0x3b8>
+80001b58:	2463ffff 	addiu	v1,v1,-1
+80001b5c:	8fa20010 	lw	v0,16(sp)
+80001b60:	24420001 	addiu	v0,v0,1
+80001b64:	afa20010 	sw	v0,16(sp)
+80001b68:	8fa20010 	lw	v0,16(sp)
+80001b6c:	2c4203e8 	sltiu	v0,v0,1000
+80001b70:	1440fffa 	bnez	v0,80001b5c <happy+0x398>
+80001b74:	00000000 	nop
+80001b78:	2463ffff 	addiu	v1,v1,-1
+happy():
+G:\0\2bluetooth_car\motor/main.c:400
+	turnright();
+	k = i;
+	while(k--)	delay();
+	turnleft();
+	k = i/2;
+	while(k--)	delay();
+80001b7c:	1460fff2 	bnez	v1,80001b48 <happy+0x384>
+80001b80:	00000000 	nop
+mystop():
+G:\0\2bluetooth_car\motor/main.c:359
+	state = 1;
+	set_gear(-2, -2, 2, 2);
+}
+
+void mystop(void) {
+	state = 0;
+80001b84:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001b88:	af80800c 	sw	zero,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001b8c:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001b90:	af808008 	sw	zero,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001b94:	0c000441 	jal	80001104 <_go>
+80001b98:	af808010 	sw	zero,-32752(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:402
+	while(k--)	delay();
+	turnleft();
+	k = i/2;
+	while(k--)	delay();
+	mystop();
+80001b9c:	8fbf002c 	lw	ra,44(sp)
+80001ba0:	03e00008 	jr	ra
+80001ba4:	27bd0030 	addiu	sp,sp,48
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:331
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+		state = 0;
+80001ba8:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001bac:	af80800c 	sw	zero,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001bb0:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001bb4:	af808008 	sw	zero,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001bb8:	0c000441 	jal	80001104 <_go>
+80001bbc:	af808010 	sw	zero,-32752(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:377
+{
+	round = init_round;
+}
+
+void happy()
+{
+80001bc0:	1000ff99 	b	80001a28 <happy+0x264>
+80001bc4:	24030064 	li	v1,100
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:331
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+		state = 0;
+80001bc8:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001bcc:	af80800c 	sw	zero,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001bd0:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001bd4:	af808008 	sw	zero,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001bd8:	0c000441 	jal	80001104 <_go>
+80001bdc:	af808010 	sw	zero,-32752(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+80001be0:	1000ff82 	b	800019ec <happy+0x228>
+80001be4:	8f828004 	lw	v0,-32764(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:331
+		state = 0;
+80001be8:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001bec:	af80800c 	sw	zero,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001bf0:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001bf4:	af808008 	sw	zero,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001bf8:	0c000441 	jal	80001104 <_go>
+80001bfc:	af808010 	sw	zero,-32752(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+80001c00:	1000ff6b 	b	800019b0 <happy+0x1ec>
+80001c04:	8f828004 	lw	v0,-32764(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:331
+		state = 0;
+80001c08:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001c0c:	af80800c 	sw	zero,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001c10:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001c14:	af808008 	sw	zero,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001c18:	0c000441 	jal	80001104 <_go>
+80001c1c:	af808010 	sw	zero,-32752(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+80001c20:	1000ff54 	b	80001974 <happy+0x1b0>
+80001c24:	8f828004 	lw	v0,-32764(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:331
+		state = 0;
+80001c28:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001c2c:	af80800c 	sw	zero,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001c30:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001c34:	af808008 	sw	zero,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001c38:	0c000441 	jal	80001104 <_go>
+80001c3c:	af808010 	sw	zero,-32752(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+80001c40:	1000ff3d 	b	80001938 <happy+0x174>
+80001c44:	8f828004 	lw	v0,-32764(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:331
+		state = 0;
+80001c48:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001c4c:	af80800c 	sw	zero,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001c50:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001c54:	af808008 	sw	zero,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001c58:	0c000441 	jal	80001104 <_go>
+80001c5c:	af808010 	sw	zero,-32752(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+80001c60:	1000ff26 	b	800018fc <happy+0x138>
+80001c64:	8f828004 	lw	v0,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001c68:	24020002 	li	v0,2
+80001c6c:	af82800c 	sw	v0,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001c70:	af828014 	sw	v0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001c74:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:367
+	gear_rf = rf;
+80001c78:	af828010 	sw	v0,-32752(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	_go();
+80001c7c:	0c000441 	jal	80001104 <_go>
+80001c80:	af808004 	sw	zero,-32764(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:377
+{
+	round = init_round;
+}
+
+void happy()
+{
+80001c84:	1000feff 	b	80001884 <happy+0xc0>
+80001c88:	24030064 	li	v1,100
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001c8c:	24020002 	li	v0,2
+80001c90:	af82800c 	sw	v0,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001c94:	af828014 	sw	v0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001c98:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:367
+	gear_rf = rf;
+80001c9c:	af828010 	sw	v0,-32752(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	_go();
+80001ca0:	0c000441 	jal	80001104 <_go>
+80001ca4:	af808004 	sw	zero,-32764(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:320
+	}
+}
+
+void speedup(void) {
+	//小车当前状态不是直行
+	if (state != 0) {
+80001ca8:	1000fee7 	b	80001848 <happy+0x84>
+80001cac:	8f828004 	lw	v0,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001cb0:	24020002 	li	v0,2
+80001cb4:	af82800c 	sw	v0,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001cb8:	af828014 	sw	v0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001cbc:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:367
+	gear_rf = rf;
+80001cc0:	af828010 	sw	v0,-32752(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	_go();
+80001cc4:	0c000441 	jal	80001104 <_go>
+80001cc8:	af808004 	sw	zero,-32764(gp)
+happy():
+G:\0\2bluetooth_car\motor/main.c:320
+	}
+}
+
+void speedup(void) {
+	//小车当前状态不是直行
+	if (state != 0) {
+80001ccc:	1000fecf 	b	8000180c <happy+0x48>
+80001cd0:	8f828004 	lw	v0,-32764(gp)
+
+80001cd4 <_mips_handle_irq>:
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:176
+		ptr++;
+	}
+}
+
+
+void _mips_handle_irq(void* ctx, int reason) {
+80001cd4:	27bdffc0 	addiu	sp,sp,-64
+G:\0\2bluetooth_car\motor/main.c:182
+	unsigned int value = 0;
+	unsigned int period = 0;
+
+	// *WRITE_IO(UART_BASE + ier) = 0x00000000; // IER register. disable interrupts
+
+	*WRITE_IO(IO_LEDR) = 0xF00F;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001cd8:	3c02b060 	lui	v0,0xb060
+80001cdc:	3403f00f 	li	v1,0xf00f
+G:\0\2bluetooth_car\motor/main.c:176
+		ptr++;
+	}
+}
+
+
+void _mips_handle_irq(void* ctx, int reason) {
+80001ce0:	afbf003c 	sw	ra,60(sp)
+G:\0\2bluetooth_car\motor/main.c:182
+	unsigned int value = 0;
+	unsigned int period = 0;
+
+	// *WRITE_IO(UART_BASE + ier) = 0x00000000; // IER register. disable interrupts
+
+	*WRITE_IO(IO_LEDR) = 0xF00F;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001ce4:	ac430000 	sw	v1,0(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001ce8:	afa00034 	sw	zero,52(sp)
+80001cec:	8fa20034 	lw	v0,52(sp)
+80001cf0:	2c4203e8 	sltiu	v0,v0,1000
+80001cf4:	10400008 	beqz	v0,80001d18 <_mips_handle_irq+0x44>
+80001cf8:	3c03b0a0 	lui	v1,0xb0a0
+80001cfc:	8fa20034 	lw	v0,52(sp)
+80001d00:	24420001 	addiu	v0,v0,1
+80001d04:	afa20034 	sw	v0,52(sp)
+80001d08:	8fa20034 	lw	v0,52(sp)
+80001d0c:	2c4203e8 	sltiu	v0,v0,1000
+80001d10:	1440fffa 	bnez	v0,80001cfc <_mips_handle_irq+0x28>
+80001d14:	3c03b0a0 	lui	v1,0xb0a0
+BT_uart_inbyte():
+G:\0\2bluetooth_car\motor/main.c:279
+}
+
+char BT_uart_inbyte(void) {
+	unsigned int RecievedByte;
+
+	while(!((*READ_IO(BT_UART_BASE + lsr) & 0x00000001)==0x00000001));
+80001d18:	8c621014 	lw	v0,4116(v1)
+80001d1c:	30420001 	andi	v0,v0,0x1
+80001d20:	5040fffd 	beqzl	v0,80001d18 <_mips_handle_irq+0x44>
+80001d24:	3c03b0a0 	lui	v1,0xb0a0
+G:\0\2bluetooth_car\motor/main.c:281
+
+	RecievedByte = *READ_IO(BT_UART_BASE + rbr);
+80001d28:	8c621000 	lw	v0,4096(v1)
+80001d2c:	304200ff 	andi	v0,v0,0xff
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:185
+	// *WRITE_IO(UART_BASE + ier) = 0x00000000; // IER register. disable interrupts
+
+	*WRITE_IO(IO_LEDR) = 0xF00F;  // Display 0xFFFF on LEDs to indicate receive data from uart
+	delay();
+
+	BT_rxData = BT_uart_inbyte();
+80001d30:	af828018 	sw	v0,-32744(gp)
+G:\0\2bluetooth_car\motor/main.c:186
+	if (BT_rxData == 'w') {
+80001d34:	8f838018 	lw	v1,-32744(gp)
+80001d38:	24020077 	li	v0,119
+80001d3c:	10620038 	beq	v1,v0,80001e20 <_mips_handle_irq+0x14c>
+80001d40:	3c02b060 	lui	v0,0xb060
+G:\0\2bluetooth_car\motor/main.c:192
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x1;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		speedup();
+	}
+	else if (BT_rxData == 's') {
+80001d44:	8f838018 	lw	v1,-32744(gp)
+80001d48:	24020073 	li	v0,115
+80001d4c:	10620057 	beq	v1,v0,80001eac <_mips_handle_irq+0x1d8>
+80001d50:	3c02b060 	lui	v0,0xb060
+G:\0\2bluetooth_car\motor/main.c:198
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x2;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		slowdown();
+	}
+	else if (BT_rxData == 'q') {
+80001d54:	8f838018 	lw	v1,-32744(gp)
+80001d58:	24020071 	li	v0,113
+80001d5c:	1062006c 	beq	v1,v0,80001f10 <_mips_handle_irq+0x23c>
+80001d60:	3c02b060 	lui	v0,0xb060
+G:\0\2bluetooth_car\motor/main.c:203
+		*WRITE_IO(IO_LEDR) = 0x4;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		leftforward();
+	}
+	else if (BT_rxData == 'e') {
+80001d64:	8f838018 	lw	v1,-32744(gp)
+80001d68:	24020065 	li	v0,101
+80001d6c:	106200ad 	beq	v1,v0,80002024 <_mips_handle_irq+0x350>
+80001d70:	3c02b060 	lui	v0,0xb060
+G:\0\2bluetooth_car\motor/main.c:208
+		*WRITE_IO(IO_LEDR) = 0x8;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		rightforward();
+	}
+	else if (BT_rxData == 'd') {
+80001d74:	8f838018 	lw	v1,-32744(gp)
+80001d78:	24020064 	li	v0,100
+80001d7c:	1062008c 	beq	v1,v0,80001fb0 <_mips_handle_irq+0x2dc>
+80001d80:	3c02b060 	lui	v0,0xb060
+G:\0\2bluetooth_car\motor/main.c:214
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x10;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		turnright();
+	}
+	else if (BT_rxData == 'a') {
+80001d84:	8f838018 	lw	v1,-32744(gp)
+80001d88:	24020061 	li	v0,97
+80001d8c:	106200c0 	beq	v1,v0,80002090 <_mips_handle_irq+0x3bc>
+80001d90:	3c02b060 	lui	v0,0xb060
+G:\0\2bluetooth_car\motor/main.c:220
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x20;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		turnleft();
+	}
+	else if (BT_rxData == '8') {
+80001d94:	8f838018 	lw	v1,-32744(gp)
+80001d98:	24020038 	li	v0,56
+80001d9c:	106200cd 	beq	v1,v0,800020d4 <_mips_handle_irq+0x400>
+80001da0:	3c02b060 	lui	v0,0xb060
+G:\0\2bluetooth_car\motor/main.c:225
+		*WRITE_IO(IO_LEDR) = 0x20;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		roundClockwise();
+	}
+	else if (BT_rxData == 'h') {
+80001da4:	8f838018 	lw	v1,-32744(gp)
+80001da8:	24020068 	li	v0,104
+80001dac:	106200d9 	beq	v1,v0,80002114 <_mips_handle_irq+0x440>
+80001db0:	af808000 	sw	zero,-32768(gp)
+G:\0\2bluetooth_car\motor/main.c:233
+		delay();
+		happy();
+	}
+	else {
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x40;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001db4:	3c02b060 	lui	v0,0xb060
+80001db8:	24030040 	li	v1,64
+80001dbc:	ac430000 	sw	v1,0(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001dc0:	afa00010 	sw	zero,16(sp)
+80001dc4:	8fa20010 	lw	v0,16(sp)
+80001dc8:	2c4203e8 	sltiu	v0,v0,1000
+80001dcc:	50400009 	beqzl	v0,80001df4 <_mips_handle_irq+0x120>
+80001dd0:	af808004 	sw	zero,-32764(gp)
+80001dd4:	8fa20010 	lw	v0,16(sp)
+80001dd8:	24420001 	addiu	v0,v0,1
+80001ddc:	afa20010 	sw	v0,16(sp)
+80001de0:	8fa20010 	lw	v0,16(sp)
+80001de4:	2c4203e8 	sltiu	v0,v0,1000
+80001de8:	1440fffa 	bnez	v0,80001dd4 <_mips_handle_irq+0x100>
+80001dec:	00000000 	nop
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:331
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+		state = 0;
+80001df0:	af808004 	sw	zero,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001df4:	af80800c 	sw	zero,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001df8:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001dfc:	af808008 	sw	zero,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001e00:	0c000441 	jal	80001104 <_go>
+80001e04:	af808010 	sw	zero,-32752(gp)
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:241
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+	return;
+}
+80001e08:	8fbf003c 	lw	ra,60(sp)
+G:\0\2bluetooth_car\motor/main.c:239
+		delay();
+		mystop();
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001e0c:	3403ffff 	li	v1,0xffff
+80001e10:	3c02b060 	lui	v0,0xb060
+80001e14:	ac430000 	sw	v1,0(v0)
+G:\0\2bluetooth_car\motor/main.c:241
+	return;
+}
+80001e18:	03e00008 	jr	ra
+80001e1c:	27bd0040 	addiu	sp,sp,64
+G:\0\2bluetooth_car\motor/main.c:188
+	delay();
+
+	BT_rxData = BT_uart_inbyte();
+	if (BT_rxData == 'w') {
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x1;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001e20:	24030001 	li	v1,1
+G:\0\2bluetooth_car\motor/main.c:187
+	*WRITE_IO(IO_LEDR) = 0xF00F;  // Display 0xFFFF on LEDs to indicate receive data from uart
+	delay();
+
+	BT_rxData = BT_uart_inbyte();
+	if (BT_rxData == 'w') {
+		round = 0;
+80001e24:	af808000 	sw	zero,-32768(gp)
+G:\0\2bluetooth_car\motor/main.c:188
+		*WRITE_IO(IO_LEDR) = 0x1;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001e28:	ac430000 	sw	v1,0(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001e2c:	afa00030 	sw	zero,48(sp)
+80001e30:	8fa20030 	lw	v0,48(sp)
+80001e34:	2c4203e8 	sltiu	v0,v0,1000
+80001e38:	10400008 	beqz	v0,80001e5c <_mips_handle_irq+0x188>
+80001e3c:	8f828004 	lw	v0,-32764(gp)
+80001e40:	8fa20030 	lw	v0,48(sp)
+80001e44:	24420001 	addiu	v0,v0,1
+80001e48:	afa20030 	sw	v0,48(sp)
+80001e4c:	8fa20030 	lw	v0,48(sp)
+80001e50:	2c4203e8 	sltiu	v0,v0,1000
+80001e54:	1440fffa 	bnez	v0,80001e40 <_mips_handle_irq+0x16c>
+80001e58:	8f828004 	lw	v0,-32764(gp)
+speedup():
+G:\0\2bluetooth_car\motor/main.c:320
+	}
+}
+
+void speedup(void) {
+	//小车当前状态不是直行
+	if (state != 0) {
+80001e5c:	14400047 	bnez	v0,80001f7c <_mips_handle_irq+0x2a8>
+80001e60:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:325
+		state = 0;
+		set_gear(2, 2, 2, 2);
+	}
+	else {
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+80001e64:	8f828010 	lw	v0,-32752(gp)
+80001e68:	8f838008 	lw	v1,-32760(gp)
+80001e6c:	8f85800c 	lw	a1,-32756(gp)
+80001e70:	24840001 	addiu	a0,a0,1
+80001e74:	24420001 	addiu	v0,v0,1
+80001e78:	24630001 	addiu	v1,v1,1
+80001e7c:	24a50001 	addiu	a1,a1,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001e80:	af85800c 	sw	a1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001e84:	af848014 	sw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001e88:	af838008 	sw	v1,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80001e8c:	0c000441 	jal	80001104 <_go>
+80001e90:	af828010 	sw	v0,-32752(gp)
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:241
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+	return;
+}
+80001e94:	8fbf003c 	lw	ra,60(sp)
+G:\0\2bluetooth_car\motor/main.c:239
+		delay();
+		mystop();
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001e98:	3403ffff 	li	v1,0xffff
+80001e9c:	3c02b060 	lui	v0,0xb060
+80001ea0:	ac430000 	sw	v1,0(v0)
+G:\0\2bluetooth_car\motor/main.c:241
+	return;
+}
+80001ea4:	03e00008 	jr	ra
+80001ea8:	27bd0040 	addiu	sp,sp,64
+G:\0\2bluetooth_car\motor/main.c:194
+		delay();
+		speedup();
+	}
+	else if (BT_rxData == 's') {
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x2;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001eac:	24030002 	li	v1,2
+G:\0\2bluetooth_car\motor/main.c:193
+		*WRITE_IO(IO_LEDR) = 0x1;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		speedup();
+	}
+	else if (BT_rxData == 's') {
+		round = 0;
+80001eb0:	af808000 	sw	zero,-32768(gp)
+G:\0\2bluetooth_car\motor/main.c:194
+		*WRITE_IO(IO_LEDR) = 0x2;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001eb4:	ac430000 	sw	v1,0(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001eb8:	afa0002c 	sw	zero,44(sp)
+80001ebc:	8fa2002c 	lw	v0,44(sp)
+80001ec0:	2c4203e8 	sltiu	v0,v0,1000
+80001ec4:	10400008 	beqz	v0,80001ee8 <_mips_handle_irq+0x214>
+80001ec8:	8f828004 	lw	v0,-32764(gp)
+80001ecc:	8fa2002c 	lw	v0,44(sp)
+80001ed0:	24420001 	addiu	v0,v0,1
+80001ed4:	afa2002c 	sw	v0,44(sp)
+80001ed8:	8fa2002c 	lw	v0,44(sp)
+80001edc:	2c4203e8 	sltiu	v0,v0,1000
+80001ee0:	1440fffa 	bnez	v0,80001ecc <_mips_handle_irq+0x1f8>
+80001ee4:	8f828004 	lw	v0,-32764(gp)
+slowdown():
+G:\0\2bluetooth_car\motor/main.c:330
+		set_gear(gear_lf + 1, gear_lb + 1, gear_rf + 1, gear_rb + 1);
+	}
+}
+
+void slowdown(void) {
+	if (state != 0) {
+80001ee8:	1440ffc1 	bnez	v0,80001df0 <_mips_handle_irq+0x11c>
+80001eec:	8f848014 	lw	a0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:335
+		state = 0;
+		set_gear(0, 0, 0, 0);
+	}
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+80001ef0:	8f828010 	lw	v0,-32752(gp)
+80001ef4:	8f838008 	lw	v1,-32760(gp)
+80001ef8:	8f85800c 	lw	a1,-32756(gp)
+80001efc:	2484ffff 	addiu	a0,a0,-1
+80001f00:	2442ffff 	addiu	v0,v0,-1
+80001f04:	2463ffff 	addiu	v1,v1,-1
+_mips_handle_irq():
+80001f08:	1000ffdd 	b	80001e80 <_mips_handle_irq+0x1ac>
+80001f0c:	24a5ffff 	addiu	a1,a1,-1
+G:\0\2bluetooth_car\motor/main.c:199
+		*WRITE_IO(IO_LEDR) = 0x2;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		slowdown();
+	}
+	else if (BT_rxData == 'q') {
+		*WRITE_IO(IO_LEDR) = 0x4;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001f10:	24030004 	li	v1,4
+80001f14:	ac430000 	sw	v1,0(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001f18:	afa00028 	sw	zero,40(sp)
+80001f1c:	8fa20028 	lw	v0,40(sp)
+80001f20:	2c4203e8 	sltiu	v0,v0,1000
+80001f24:	10400008 	beqz	v0,80001f48 <_mips_handle_irq+0x274>
+80001f28:	24030001 	li	v1,1
+80001f2c:	8fa20028 	lw	v0,40(sp)
+80001f30:	24420001 	addiu	v0,v0,1
+80001f34:	afa20028 	sw	v0,40(sp)
+80001f38:	8fa20028 	lw	v0,40(sp)
+80001f3c:	2c4203e8 	sltiu	v0,v0,1000
+80001f40:	1440fffa 	bnez	v0,80001f2c <_mips_handle_irq+0x258>
+80001f44:	24030001 	li	v1,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:366
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+	gear_lf = lf;
+	gear_rb = rb;
+80001f48:	24020003 	li	v0,3
+leftforward():
+G:\0\2bluetooth_car\motor/main.c:339
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+	}
+}
+void leftforward(void) {
+	state = 1;
+80001f4c:	af838004 	sw	v1,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001f50:	af83800c 	sw	v1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_lf = lf;
+	gear_rb = rb;
+80001f54:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:367
+	gear_rf = rf;
+80001f58:	af828010 	sw	v0,-32752(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	_go();
+80001f5c:	0c000441 	jal	80001104 <_go>
+80001f60:	af808014 	sw	zero,-32748(gp)
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:241
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+	return;
+}
+80001f64:	8fbf003c 	lw	ra,60(sp)
+G:\0\2bluetooth_car\motor/main.c:239
+		delay();
+		mystop();
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001f68:	3403ffff 	li	v1,0xffff
+80001f6c:	3c02b060 	lui	v0,0xb060
+80001f70:	ac430000 	sw	v1,0(v0)
+G:\0\2bluetooth_car\motor/main.c:241
+	return;
+}
+80001f74:	03e00008 	jr	ra
+80001f78:	27bd0040 	addiu	sp,sp,64
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001f7c:	24020002 	li	v0,2
+80001f80:	af82800c 	sw	v0,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001f84:	af828014 	sw	v0,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001f88:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:367
+	gear_rf = rf;
+80001f8c:	af828010 	sw	v0,-32752(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	_go();
+80001f90:	0c000441 	jal	80001104 <_go>
+80001f94:	af808004 	sw	zero,-32764(gp)
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:241
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+	return;
+}
+80001f98:	8fbf003c 	lw	ra,60(sp)
+G:\0\2bluetooth_car\motor/main.c:239
+		delay();
+		mystop();
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001f9c:	3403ffff 	li	v1,0xffff
+80001fa0:	3c02b060 	lui	v0,0xb060
+80001fa4:	ac430000 	sw	v1,0(v0)
+G:\0\2bluetooth_car\motor/main.c:241
+	return;
+}
+80001fa8:	03e00008 	jr	ra
+80001fac:	27bd0040 	addiu	sp,sp,64
+G:\0\2bluetooth_car\motor/main.c:210
+		delay();
+		rightforward();
+	}
+	else if (BT_rxData == 'd') {
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x10;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001fb0:	24030010 	li	v1,16
+G:\0\2bluetooth_car\motor/main.c:209
+		*WRITE_IO(IO_LEDR) = 0x8;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		rightforward();
+	}
+	else if (BT_rxData == 'd') {
+		round = 0;
+80001fb4:	af808000 	sw	zero,-32768(gp)
+G:\0\2bluetooth_car\motor/main.c:210
+		*WRITE_IO(IO_LEDR) = 0x10;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80001fb8:	ac430000 	sw	v1,0(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80001fbc:	afa00020 	sw	zero,32(sp)
+80001fc0:	8fa20020 	lw	v0,32(sp)
+80001fc4:	2c4203e8 	sltiu	v0,v0,1000
+80001fc8:	10400008 	beqz	v0,80001fec <_mips_handle_irq+0x318>
+80001fcc:	24030002 	li	v1,2
+80001fd0:	8fa20020 	lw	v0,32(sp)
+80001fd4:	24420001 	addiu	v0,v0,1
+80001fd8:	afa20020 	sw	v0,32(sp)
+80001fdc:	8fa20020 	lw	v0,32(sp)
+80001fe0:	2c4203e8 	sltiu	v0,v0,1000
+80001fe4:	1440fffa 	bnez	v0,80001fd0 <_mips_handle_irq+0x2fc>
+80001fe8:	24030002 	li	v1,2
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:366
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+	gear_lf = lf;
+	gear_rb = rb;
+80001fec:	2402fffe 	li	v0,-2
+turnleft():
+G:\0\2bluetooth_car\motor/main.c:354
+	state = 1;
+	set_gear(2, 2, -2, -2);
+}
+
+void turnleft(void) {
+	state = 1;
+80001ff0:	24040001 	li	a0,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80001ff4:	af83800c 	sw	v1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80001ff8:	af838014 	sw	v1,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80001ffc:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:367
+	gear_rf = rf;
+80002000:	af828010 	sw	v0,-32752(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	_go();
+80002004:	0c000441 	jal	80001104 <_go>
+80002008:	af848004 	sw	a0,-32764(gp)
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:241
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+	return;
+}
+8000200c:	8fbf003c 	lw	ra,60(sp)
+G:\0\2bluetooth_car\motor/main.c:239
+		delay();
+		mystop();
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80002010:	3403ffff 	li	v1,0xffff
+80002014:	3c02b060 	lui	v0,0xb060
+80002018:	ac430000 	sw	v1,0(v0)
+G:\0\2bluetooth_car\motor/main.c:241
+	return;
+}
+8000201c:	03e00008 	jr	ra
+80002020:	27bd0040 	addiu	sp,sp,64
+G:\0\2bluetooth_car\motor/main.c:204
+		*WRITE_IO(IO_LEDR) = 0x4;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		leftforward();
+	}
+	else if (BT_rxData == 'e') {
+		*WRITE_IO(IO_LEDR) = 0x8;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80002024:	24030008 	li	v1,8
+80002028:	ac430000 	sw	v1,0(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+8000202c:	afa00024 	sw	zero,36(sp)
+80002030:	8fa20024 	lw	v0,36(sp)
+80002034:	2c4203e8 	sltiu	v0,v0,1000
+80002038:	10400008 	beqz	v0,8000205c <_mips_handle_irq+0x388>
+8000203c:	24020001 	li	v0,1
+80002040:	8fa20024 	lw	v0,36(sp)
+80002044:	24420001 	addiu	v0,v0,1
+80002048:	afa20024 	sw	v0,36(sp)
+8000204c:	8fa20024 	lw	v0,36(sp)
+80002050:	2c4203e8 	sltiu	v0,v0,1000
+80002054:	1440fffa 	bnez	v0,80002040 <_mips_handle_irq+0x36c>
+80002058:	24020001 	li	v0,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+8000205c:	24030003 	li	v1,3
+rightforward():
+G:\0\2bluetooth_car\motor/main.c:344
+	state = 1;
+	set_gear(0, 1, 3, 3);
+}
+
+void rightforward(void) {
+	state = 1;
+80002060:	af828004 	sw	v0,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80002064:	af83800c 	sw	v1,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80002068:	af838014 	sw	v1,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+8000206c:	af828008 	sw	v0,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80002070:	0c000441 	jal	80001104 <_go>
+80002074:	af808010 	sw	zero,-32752(gp)
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:241
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+	return;
+}
+80002078:	8fbf003c 	lw	ra,60(sp)
+G:\0\2bluetooth_car\motor/main.c:239
+		delay();
+		mystop();
+	}
+	//
+
+		*WRITE_IO(IO_LEDR) = 0xFFFF;  // Display 0xFFFF on LEDs to indicate receive data from uart
+8000207c:	3403ffff 	li	v1,0xffff
+80002080:	3c02b060 	lui	v0,0xb060
+80002084:	ac430000 	sw	v1,0(v0)
+G:\0\2bluetooth_car\motor/main.c:241
+	return;
+}
+80002088:	03e00008 	jr	ra
+8000208c:	27bd0040 	addiu	sp,sp,64
+G:\0\2bluetooth_car\motor/main.c:216
+		delay();
+		turnright();
+	}
+	else if (BT_rxData == 'a') {
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x20;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80002090:	24030020 	li	v1,32
+G:\0\2bluetooth_car\motor/main.c:215
+		*WRITE_IO(IO_LEDR) = 0x10;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		turnright();
+	}
+	else if (BT_rxData == 'a') {
+		round = 0;
+80002094:	af808000 	sw	zero,-32768(gp)
+G:\0\2bluetooth_car\motor/main.c:216
+		*WRITE_IO(IO_LEDR) = 0x20;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80002098:	ac430000 	sw	v1,0(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+8000209c:	afa0001c 	sw	zero,28(sp)
+800020a0:	8fa2001c 	lw	v0,28(sp)
+800020a4:	2c4203e8 	sltiu	v0,v0,1000
+800020a8:	10400008 	beqz	v0,800020cc <_mips_handle_irq+0x3f8>
+800020ac:	2403fffe 	li	v1,-2
+800020b0:	8fa2001c 	lw	v0,28(sp)
+800020b4:	24420001 	addiu	v0,v0,1
+800020b8:	afa2001c 	sw	v0,28(sp)
+800020bc:	8fa2001c 	lw	v0,28(sp)
+800020c0:	2c4203e8 	sltiu	v0,v0,1000
+800020c4:	1440fffa 	bnez	v0,800020b0 <_mips_handle_irq+0x3dc>
+800020c8:	2403fffe 	li	v1,-2
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:366
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+	gear_lf = lf;
+	gear_rb = rb;
+800020cc:	1000ffc8 	b	80001ff0 <_mips_handle_irq+0x31c>
+800020d0:	24020002 	li	v0,2
+G:\0\2bluetooth_car\motor/main.c:221
+		*WRITE_IO(IO_LEDR) = 0x20;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		turnleft();
+	}
+	else if (BT_rxData == '8') {
+		*WRITE_IO(IO_LEDR) = 0x20;  // Display 0xFFFF on LEDs to indicate receive data from uart
+800020d4:	24030020 	li	v1,32
+800020d8:	ac430000 	sw	v1,0(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+800020dc:	afa00018 	sw	zero,24(sp)
+800020e0:	8fa20018 	lw	v0,24(sp)
+800020e4:	2c4203e8 	sltiu	v0,v0,1000
+800020e8:	10400008 	beqz	v0,8000210c <_mips_handle_irq+0x438>
+800020ec:	240201b0 	li	v0,432
+800020f0:	8fa20018 	lw	v0,24(sp)
+800020f4:	24420001 	addiu	v0,v0,1
+800020f8:	afa20018 	sw	v0,24(sp)
+800020fc:	8fa20018 	lw	v0,24(sp)
+80002100:	2c4203e8 	sltiu	v0,v0,1000
+80002104:	1440fffa 	bnez	v0,800020f0 <_mips_handle_irq+0x41c>
+80002108:	240201b0 	li	v0,432
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:373
+	_go();
+}
+
+void roundClockwise()
+{
+	round = init_round;
+8000210c:	1000ff61 	b	80001e94 <_mips_handle_irq+0x1c0>
+80002110:	af828000 	sw	v0,-32768(gp)
+G:\0\2bluetooth_car\motor/main.c:227
+		delay();
+		roundClockwise();
+	}
+	else if (BT_rxData == 'h') {
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x20;  // Display 0xFFFF on LEDs to indicate receive data from uart
+80002114:	3c02b060 	lui	v0,0xb060
+80002118:	24030020 	li	v1,32
+8000211c:	ac430000 	sw	v1,0(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80002120:	afa00014 	sw	zero,20(sp)
+80002124:	8fa20014 	lw	v0,20(sp)
+80002128:	2c4203e8 	sltiu	v0,v0,1000
+8000212c:	10400008 	beqz	v0,80002150 <_mips_handle_irq+0x47c>
+80002130:	00000000 	nop
+80002134:	8fa20014 	lw	v0,20(sp)
+80002138:	24420001 	addiu	v0,v0,1
+8000213c:	afa20014 	sw	v0,20(sp)
+80002140:	8fa20014 	lw	v0,20(sp)
+80002144:	2c4203e8 	sltiu	v0,v0,1000
+80002148:	1440fffa 	bnez	v0,80002134 <_mips_handle_irq+0x460>
+8000214c:	00000000 	nop
+_mips_handle_irq():
+G:\0\2bluetooth_car\motor/main.c:229
+	}
+	else if (BT_rxData == 'h') {
+		round = 0;
+		*WRITE_IO(IO_LEDR) = 0x20;  // Display 0xFFFF on LEDs to indicate receive data from uart
+		delay();
+		happy();
+80002150:	0c0005f1 	jal	800017c4 <happy>
+80002154:	00000000 	nop
+80002158:	1000ff4f 	b	80001e98 <_mips_handle_irq+0x1c4>
+8000215c:	8fbf003c 	lw	ra,60(sp)
+
+80002160 <main>:
+main():
+G:\0\2bluetooth_car\motor/main.c:97
+#define IO_7SEG 0xb0800000
+
+//------------------
+// main()
+//------------------
+int main() {
+80002160:	27bdffb8 	addiu	sp,sp,-72
+G:\0\2bluetooth_car\motor/main.c:99
+	// volatile unsigned int pushbutton, count = 0xF;
+	volatile unsigned int j = 1;
+80002164:	24020001 	li	v0,1
+G:\0\2bluetooth_car\motor/main.c:101
+
+	*WRITE_IO(UART_BASE + lcr) = 0x00000080; // LCR[7]  is 1
+80002168:	24030080 	li	v1,128
+G:\0\2bluetooth_car\motor/main.c:99
+//------------------
+// main()
+//------------------
+int main() {
+	// volatile unsigned int pushbutton, count = 0xF;
+	volatile unsigned int j = 1;
+8000216c:	afa2002c 	sw	v0,44(sp)
+G:\0\2bluetooth_car\motor/main.c:101
+
+	*WRITE_IO(UART_BASE + lcr) = 0x00000080; // LCR[7]  is 1
+80002170:	3c02b040 	lui	v0,0xb040
+G:\0\2bluetooth_car\motor/main.c:97
+#define IO_7SEG 0xb0800000
+
+//------------------
+// main()
+//------------------
+int main() {
+80002174:	afbf0044 	sw	ra,68(sp)
+80002178:	afb40040 	sw	s4,64(sp)
+8000217c:	afb3003c 	sw	s3,60(sp)
+80002180:	afb20038 	sw	s2,56(sp)
+80002184:	afb10034 	sw	s1,52(sp)
+80002188:	afb00030 	sw	s0,48(sp)
+G:\0\2bluetooth_car\motor/main.c:101
+	// volatile unsigned int pushbutton, count = 0xF;
+	volatile unsigned int j = 1;
+
+	*WRITE_IO(UART_BASE + lcr) = 0x00000080; // LCR[7]  is 1
+8000218c:	ac43100c 	sw	v1,4108(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80002190:	afa00028 	sw	zero,40(sp)
+80002194:	8fa20028 	lw	v0,40(sp)
+80002198:	2c4203e8 	sltiu	v0,v0,1000
+8000219c:	10400008 	beqz	v0,800021c0 <main+0x60>
+800021a0:	3c02b040 	lui	v0,0xb040
+800021a4:	8fa20028 	lw	v0,40(sp)
+800021a8:	24420001 	addiu	v0,v0,1
+800021ac:	afa20028 	sw	v0,40(sp)
+800021b0:	8fa20028 	lw	v0,40(sp)
+800021b4:	2c4203e8 	sltiu	v0,v0,1000
+800021b8:	1440fffa 	bnez	v0,800021a4 <main+0x44>
+800021bc:	3c02b040 	lui	v0,0xb040
+main():
+G:\0\2bluetooth_car\motor/main.c:103
+	// volatile unsigned int pushbutton, count = 0xF;
+	volatile unsigned int j = 1;
+
+	*WRITE_IO(UART_BASE + lcr) = 0x00000080; // LCR[7]  is 1
+	delay();
+	*WRITE_IO(UART_BASE + dll) = 27; // DLL msb. 115200 at 50MHz. Formula is Clk/16/baudrate. From axi_uart manual.
+800021c0:	2403001b 	li	v1,27
+800021c4:	ac431000 	sw	v1,4096(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+800021c8:	afa00024 	sw	zero,36(sp)
+800021cc:	8fa20024 	lw	v0,36(sp)
+800021d0:	2c4203e8 	sltiu	v0,v0,1000
+800021d4:	10400008 	beqz	v0,800021f8 <main+0x98>
+800021d8:	3c02b040 	lui	v0,0xb040
+800021dc:	8fa20024 	lw	v0,36(sp)
+800021e0:	24420001 	addiu	v0,v0,1
+800021e4:	afa20024 	sw	v0,36(sp)
+800021e8:	8fa20024 	lw	v0,36(sp)
+800021ec:	2c4203e8 	sltiu	v0,v0,1000
+800021f0:	1440fffa 	bnez	v0,800021dc <main+0x7c>
+800021f4:	3c02b040 	lui	v0,0xb040
+main():
+G:\0\2bluetooth_car\motor/main.c:105
+
+	*WRITE_IO(UART_BASE + lcr) = 0x00000080; // LCR[7]  is 1
+	delay();
+	*WRITE_IO(UART_BASE + dll) = 27; // DLL msb. 115200 at 50MHz. Formula is Clk/16/baudrate. From axi_uart manual.
+	delay();
+	*WRITE_IO(UART_BASE + dlm) = 0x00000000; // DLL lsb.
+800021f8:	ac401004 	sw	zero,4100(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+800021fc:	afa00020 	sw	zero,32(sp)
+80002200:	8fa20020 	lw	v0,32(sp)
+80002204:	2c4203e8 	sltiu	v0,v0,1000
+80002208:	10400008 	beqz	v0,8000222c <main+0xcc>
+8000220c:	3c02b040 	lui	v0,0xb040
+80002210:	8fa20020 	lw	v0,32(sp)
+80002214:	24420001 	addiu	v0,v0,1
+80002218:	afa20020 	sw	v0,32(sp)
+8000221c:	8fa20020 	lw	v0,32(sp)
+80002220:	2c4203e8 	sltiu	v0,v0,1000
+80002224:	1440fffa 	bnez	v0,80002210 <main+0xb0>
+80002228:	3c02b040 	lui	v0,0xb040
+main():
+G:\0\2bluetooth_car\motor/main.c:107
+	delay();
+	*WRITE_IO(UART_BASE + dll) = 27; // DLL msb. 115200 at 50MHz. Formula is Clk/16/baudrate. From axi_uart manual.
+	delay();
+	*WRITE_IO(UART_BASE + dlm) = 0x00000000; // DLL lsb.
+	delay();
+	*WRITE_IO(UART_BASE + lcr) = 0x00000003; // LCR register. 8n1 parity disabled
+8000222c:	24030003 	li	v1,3
+80002230:	ac43100c 	sw	v1,4108(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80002234:	afa0001c 	sw	zero,28(sp)
+80002238:	8fa2001c 	lw	v0,28(sp)
+8000223c:	2c4203e8 	sltiu	v0,v0,1000
+80002240:	10400008 	beqz	v0,80002264 <main+0x104>
+80002244:	3c02b040 	lui	v0,0xb040
+80002248:	8fa2001c 	lw	v0,28(sp)
+8000224c:	24420001 	addiu	v0,v0,1
+80002250:	afa2001c 	sw	v0,28(sp)
+80002254:	8fa2001c 	lw	v0,28(sp)
+80002258:	2c4203e8 	sltiu	v0,v0,1000
+8000225c:	1440fffa 	bnez	v0,80002248 <main+0xe8>
+80002260:	3c02b040 	lui	v0,0xb040
+main():
+G:\0\2bluetooth_car\motor/main.c:109
+	delay();
+	*WRITE_IO(UART_BASE + dlm) = 0x00000000; // DLL lsb.
+	delay();
+	*WRITE_IO(UART_BASE + lcr) = 0x00000003; // LCR register. 8n1 parity disabled
+	delay();
+	*WRITE_IO(UART_BASE + ier) = 0x00000000; // IER register. disable interrupts
+80002264:	ac401004 	sw	zero,4100(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+80002268:	afa00018 	sw	zero,24(sp)
+8000226c:	8fa20018 	lw	v0,24(sp)
+80002270:	2c4203e8 	sltiu	v0,v0,1000
+80002274:	10400008 	beqz	v0,80002298 <main+0x138>
+80002278:	3c02b040 	lui	v0,0xb040
+8000227c:	8fa20018 	lw	v0,24(sp)
+80002280:	24420001 	addiu	v0,v0,1
+80002284:	afa20018 	sw	v0,24(sp)
+80002288:	8fa20018 	lw	v0,24(sp)
+8000228c:	2c4203e8 	sltiu	v0,v0,1000
+80002290:	1440fffa 	bnez	v0,8000227c <main+0x11c>
+80002294:	3c02b040 	lui	v0,0xb040
+main():
+G:\0\2bluetooth_car\motor/main.c:112
+	*WRITE_IO(UART_BASE + lcr) = 0x00000003; // LCR register. 8n1 parity disabled
+	delay();
+	*WRITE_IO(UART_BASE + ier) = 0x00000000; // IER register. disable interrupts
+	delay();
+
+	*WRITE_IO(UART_BASE + ier) = 0x00000001; // IER register. Enables Receiver Line Status and Received Data Interrupts
+80002298:	24030001 	li	v1,1
+8000229c:	ac431004 	sw	v1,4100(v0)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+800022a0:	afa00014 	sw	zero,20(sp)
+800022a4:	8fa20014 	lw	v0,20(sp)
+800022a8:	2c4203e8 	sltiu	v0,v0,1000
+800022ac:	10400008 	beqz	v0,800022d0 <main+0x170>
+800022b0:	00000000 	nop
+800022b4:	8fa20014 	lw	v0,20(sp)
+800022b8:	24420001 	addiu	v0,v0,1
+800022bc:	afa20014 	sw	v0,20(sp)
+800022c0:	8fa20014 	lw	v0,20(sp)
+800022c4:	2c4203e8 	sltiu	v0,v0,1000
+800022c8:	1440fffa 	bnez	v0,800022b4 <main+0x154>
+800022cc:	00000000 	nop
+main():
+G:\0\2bluetooth_car\motor/main.c:115
+	delay();
+
+	*WRITE_IO(UART_BASE + ier) = 0x00000001; // IER register. Enables Receiver Line Status and Received Data Interrupts
+	delay();
+
+	init_bluetooth();
+800022d0:	0c000521 	jal	80001484 <init_bluetooth>
+800022d4:	00008021 	move	s0,zero
+G:\0\2bluetooth_car\motor/main.c:125
+	while(1) {
+		// LEDs display
+
+		// *WRITE_IO(IO_7SEG) = gear_lf + gear_lb << 4 + gear_rf << 8 + gear_rb << 12;
+		// delay();
+		*WRITE_IO(IO_LEDR) = count++;
+800022d8:	3c11b060 	lui	s1,0xb060
+leftforward():
+G:\0\2bluetooth_car\motor/main.c:339
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+	}
+}
+void leftforward(void) {
+	state = 1;
+800022dc:	24140001 	li	s4,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:366
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+	gear_lf = lf;
+	gear_rb = rb;
+800022e0:	24130003 	li	s3,3
+main():
+G:\0\2bluetooth_car\motor/main.c:136
+			round--;
+		}
+		else if (round > 0) {
+			leftforward();
+			round--;
+			if(round == 0) round = init_round;
+800022e4:	241201b0 	li	s2,432
+G:\0\2bluetooth_car\motor/main.c:125
+	while(1) {
+		// LEDs display
+
+		// *WRITE_IO(IO_7SEG) = gear_lf + gear_lb << 4 + gear_rf << 8 + gear_rb << 12;
+		// delay();
+		*WRITE_IO(IO_LEDR) = count++;
+800022e8:	ae300000 	sw	s0,0(s1)
+delay():
+G:\0\2bluetooth_car\motor/main.c:149
+}
+
+void delay() {
+	volatile unsigned int j;
+
+	for (j = 0; j < (1000); j++) ;	// delay
+800022ec:	afa00010 	sw	zero,16(sp)
+800022f0:	8fa20010 	lw	v0,16(sp)
+800022f4:	2c4203e8 	sltiu	v0,v0,1000
+800022f8:	10400008 	beqz	v0,8000231c <main+0x1bc>
+800022fc:	8f828000 	lw	v0,-32768(gp)
+80002300:	8fa20010 	lw	v0,16(sp)
+80002304:	24420001 	addiu	v0,v0,1
+80002308:	afa20010 	sw	v0,16(sp)
+8000230c:	8fa20010 	lw	v0,16(sp)
+80002310:	2c4203e8 	sltiu	v0,v0,1000
+80002314:	1440fffa 	bnez	v0,80002300 <main+0x1a0>
+80002318:	8f828000 	lw	v0,-32768(gp)
+main():
+G:\0\2bluetooth_car\motor/main.c:129
+		// delay();
+		*WRITE_IO(IO_LEDR) = count++;
+		delay();
+
+
+		if (round >= sep_round) {
+8000231c:	284300b6 	slti	v1,v0,182
+80002320:	5060000f 	beqzl	v1,80002360 <main+0x200>
+80002324:	af948004 	sw	s4,-32764(gp)
+G:\0\2bluetooth_car\motor/main.c:133
+			rightforward();
+			round--;
+		}
+		else if (round > 0) {
+80002328:	5840ffef 	blezl	v0,800022e8 <main+0x188>
+8000232c:	26100001 	addiu	s0,s0,1
+leftforward():
+G:\0\2bluetooth_car\motor/main.c:339
+	else {
+		set_gear(gear_lf - 1, gear_lb - 1, gear_rf - 1, gear_rb - 1);
+	}
+}
+void leftforward(void) {
+	state = 1;
+80002330:	af948004 	sw	s4,-32764(gp)
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80002334:	af94800c 	sw	s4,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80002338:	af808014 	sw	zero,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+8000233c:	af938008 	sw	s3,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+80002340:	0c000441 	jal	80001104 <_go>
+80002344:	af938010 	sw	s3,-32752(gp)
+main():
+G:\0\2bluetooth_car\motor/main.c:135
+			rightforward();
+			round--;
+		}
+		else if (round > 0) {
+			leftforward();
+			round--;
+80002348:	8f828000 	lw	v0,-32768(gp)
+8000234c:	2442ffff 	addiu	v0,v0,-1
+80002350:	0242100a 	movz	v0,s2,v0
+80002354:	af828000 	sw	v0,-32768(gp)
+80002358:	1000ffe3 	b	800022e8 <main+0x188>
+8000235c:	26100001 	addiu	s0,s0,1
+set_gear():
+G:\0\2bluetooth_car\motor/main.c:364
+	state = 0;
+	set_gear(0, 0, 0, 0);
+}
+
+void set_gear(int lf, int lb, int rf, int rb) {
+	gear_lb = lb;
+80002360:	af93800c 	sw	s3,-32756(gp)
+G:\0\2bluetooth_car\motor/main.c:365
+	gear_lf = lf;
+80002364:	af938014 	sw	s3,-32748(gp)
+G:\0\2bluetooth_car\motor/main.c:366
+	gear_rb = rb;
+80002368:	af948008 	sw	s4,-32760(gp)
+G:\0\2bluetooth_car\motor/main.c:368
+	gear_rf = rf;
+	_go();
+8000236c:	0c000441 	jal	80001104 <_go>
+80002370:	af808010 	sw	zero,-32752(gp)
+main():
+G:\0\2bluetooth_car\motor/main.c:131
+		delay();
+
+
+		if (round >= sep_round) {
+			rightforward();
+			round--;
+80002374:	8f828000 	lw	v0,-32768(gp)
+80002378:	26100001 	addiu	s0,s0,1
+8000237c:	2442ffff 	addiu	v0,v0,-1
+80002380:	1000ffd9 	b	800022e8 <main+0x188>
+80002384:	af828000 	sw	v0,-32768(gp)
